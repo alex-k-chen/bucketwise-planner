@@ -29,7 +29,7 @@ export class RecordDebtBalanceAdjustmentUseCase extends UseCase<
   ): Promise<{ currentBalanceCents: number }> {
     const debt = await this.debtRepository.findById(request.userId, request.debtId);
     if (!debt) {
-      throw new Error('Debt not found');
+      throw new ValidationError('Debt not found');
     }
 
     const occurredOn = request.occurredOn || new Date().toISOString().split('T')[0]!;

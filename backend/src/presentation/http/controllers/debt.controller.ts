@@ -8,7 +8,11 @@ import {
   upsertMortgageSchema,
 } from '../../../application/dtos/schemas/mortgage.schema.js';
 import { skipDebtPaymentSchema } from '../../../application/dtos/schemas/skip-debt-payment.schema.js';
-import { recordDebtBalanceAdjustmentSchema } from '../../../application/dtos/schemas/debt-balance-adjustment.schema.js';
+import {
+  recordDebtBalanceAdjustmentSchema,
+  listDebtBalanceAdjustmentsQuerySchema,
+  type RecordDebtBalanceAdjustmentInput,
+} from '../../../application/dtos/schemas/debt-balance-adjustment.schema.js';
 import { ListDebtBalanceAdjustmentsUseCase } from '../../../application/use-cases/list-debt-balance-adjustments.use-case.js';
 import { RecordDebtBalanceAdjustmentUseCase } from '../../../application/use-cases/record-debt-balance-adjustment.use-case.js';
 import { CalculateMortgageOverpaymentPlanUseCase } from '../../../application/use-cases/calculate-mortgage-overpayment-plan.use-case.js';
@@ -100,7 +104,7 @@ export class DebtController extends BaseController {
   async recordBalanceAdjustment(req: Request, res: Response): Promise<void> {
     const userId = (req as AuthenticatedRequest).user.id;
     const debtId = req.params.id ?? '';
-    const validated = recordDebtBalanceAdjustmentSchema.parse(req.body);
+    const validated = req.body as RecordDebtBalanceAdjustmentInput;
     const result = await this.recordDebtBalanceAdjustmentUseCase.execute({
       ...validated,
       userId,
@@ -112,11 +116,11 @@ export class DebtController extends BaseController {
   async listBalanceAdjustments(req: Request, res: Response): Promise<void> {
     const userId = (req as AuthenticatedRequest).user.id;
     const debtId = req.params.id ?? '';
-    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const parsed = listDebtBalanceAdjustmentsQuerySchema.parse({ limit: req.query.limit });
     const result = await this.listDebtBalanceAdjustmentsUseCase.execute({
       userId,
       debtId,
-      ...(limit !== undefined ? { limit } : {}),
+      ...(parsed.limit !== undefined ? { limit: parsed.limit } : {}),
     });
     this.sendSuccess(res, result);
   }

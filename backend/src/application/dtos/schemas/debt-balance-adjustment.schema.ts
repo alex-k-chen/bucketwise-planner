@@ -9,4 +9,9 @@ export const recordDebtBalanceAdjustmentSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+export const listDebtBalanceAdjustmentsQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(200).optional(),
+});
+
 export type RecordDebtBalanceAdjustmentInput = z.infer<typeof recordDebtBalanceAdjustmentSchema>;
+export type ListDebtBalanceAdjustmentsQuery = z.infer<typeof listDebtBalanceAdjustmentsQuerySchema>;

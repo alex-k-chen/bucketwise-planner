@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { ValidationError } from '../../../domain/exceptions/validation-error.js';
 import { DebtBalanceAdjustment } from '../../../domain/model/debt-balance-adjustment.entity.js';
 import type { DebtBalanceAdjustmentRepository } from '../../../domain/repositories/debt-balance-adjustment.repository.interface.js';
 
@@ -51,7 +52,16 @@ export class PostgresDebtBalanceAdjustmentRepository implements DebtBalanceAdjus
       ]);
 
       if (updateResult.rows.length === 0) {
-        throw new Error('Debt not found or balance would go negative');
+        const existsResult = await client.query(
+          'SELECT 1 FROM debts WHERE id = $1 AND user_id = $2',
+          [adjustment.debtId, adjustment.userId],
+        );
+
+        if (existsResult.rows.length === 0) {
+          throw new ValidationError('Debt not found');
+        }
+
+        throw new ValidationError('Balance adjustment would reduce debt below zero');
       }
 
       await client.query('COMMIT');
