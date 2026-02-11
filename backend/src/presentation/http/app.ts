@@ -12,6 +12,7 @@ import { GetFortnightUseCase } from '../../application/use-cases/get-fortnight.u
 import { GetMortgageUseCase } from '../../application/use-cases/get-mortgage.use-case.js';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case.js';
 import { ListDebtsUseCase } from '../../application/use-cases/list-debts.use-case.js';
+import { ListDebtBalanceAdjustmentsUseCase } from '../../application/use-cases/list-debt-balance-adjustments.use-case.js';
 import { ListForthnightsUseCase } from '../../application/use-cases/list-fortnights.use-case.js';
 import { ListSkippedDebtPaymentsUseCase } from '../../application/use-cases/list-skipped-debt-payments.use-case.js';
 import { ListTransactionsUseCase } from '../../application/use-cases/list-transactions.use-case.js';
@@ -19,6 +20,7 @@ import { LoginUseCase } from '../../application/use-cases/login.use-case.js';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case.js';
 import { PreviewTransactionCsvImportUseCase } from '../../application/use-cases/preview-transaction-csv-import.use-case.js';
 import { RecordTransactionUseCase } from '../../application/use-cases/record-transaction.use-case.js';
+import { RecordDebtBalanceAdjustmentUseCase } from '../../application/use-cases/record-debt-balance-adjustment.use-case.js';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case.js';
 import { SendChatMessageUseCase } from '../../application/use-cases/send-chat-message.use-case.js';
 import { SignupUseCase } from '../../application/use-cases/signup.use-case.js';
@@ -37,12 +39,14 @@ import { runMigrations } from '../../infrastructure/database/migrations.js';
 import { createPgPool, ensureSchema } from '../../infrastructure/database/pg.js';
 import { MemoryBudgetProfileRepository } from '../../infrastructure/persistence/memory/memory-budget-profile.repository.js';
 import { MemoryDebtRepository } from '../../infrastructure/persistence/memory/memory-debt.repository.js';
+import { MemoryDebtBalanceAdjustmentRepository } from '../../infrastructure/persistence/memory/memory-debt-balance-adjustment.repository.js';
 import { MemoryFortnightSnapshotRepository } from '../../infrastructure/persistence/memory/memory-fortnight-snapshot.repository.js';
 import { MemorySkippedDebtPaymentRepository } from '../../infrastructure/persistence/memory/memory-skipped-debt-payment.repository.js';
 import { MemoryTransactionRepository } from '../../infrastructure/persistence/memory/memory-transaction.repository.js';
 import { MemoryUnitOfWork } from '../../infrastructure/persistence/memory/memory-unit-of-work.js';
 import { MemoryUserRepository } from '../../infrastructure/persistence/memory/memory-user.repository.js';
 import { PostgresBudgetProfileRepository } from '../../infrastructure/persistence/postgres/postgres-budget-profile.repository.js';
+import { PostgresDebtBalanceAdjustmentRepository } from '../../infrastructure/persistence/postgres/postgres-debt-balance-adjustment.repository.js';
 import { PostgresDebtRepository } from '../../infrastructure/persistence/postgres/postgres-debt.repository.js';
 import { PostgresFortnightSnapshotRepository } from '../../infrastructure/persistence/postgres/postgres-fortnight-snapshot.repository.js';
 import { PostgresSkippedDebtPaymentRepository } from '../../infrastructure/persistence/postgres/postgres-skipped-debt-payment.repository.js';
@@ -106,6 +110,10 @@ export async function createApp(): Promise<Application> {
 
   const debtRepo =
     isPostgres && pool ? new PostgresDebtRepository(pool) : new MemoryDebtRepository();
+  const debtAdjustmentRepo =
+    isPostgres && pool
+      ? new PostgresDebtBalanceAdjustmentRepository(pool)
+      : new MemoryDebtBalanceAdjustmentRepository();
 
   const skippedDebtPaymentRepo =
     isPostgres && pool
@@ -148,8 +156,15 @@ export async function createApp(): Promise<Application> {
   );
   const createDebtUseCase = new CreateDebtUseCase(debtRepo);
   const listDebtsUseCase = new ListDebtsUseCase(debtRepo);
+  const listDebtBalanceAdjustmentsUseCase = new ListDebtBalanceAdjustmentsUseCase(
+    debtAdjustmentRepo,
+  );
   const updateDebtUseCase = new UpdateDebtUseCase(debtRepo);
   const skipDebtPaymentUseCase = new SkipDebtPaymentUseCase(debtRepo, skippedDebtPaymentRepo);
+  const recordDebtBalanceAdjustmentUseCase = new RecordDebtBalanceAdjustmentUseCase(
+    debtRepo,
+    debtAdjustmentRepo,
+  );
   const getDashboardUseCase = new GetDashboardUseCase(
     fortnightRepo,
     debtRepo,
@@ -215,6 +230,8 @@ export async function createApp(): Promise<Application> {
     listDebtsUseCase,
     updateDebtUseCase,
     skipDebtPaymentUseCase,
+    recordDebtBalanceAdjustmentUseCase,
+    listDebtBalanceAdjustmentsUseCase,
     getMortgageUseCase,
     upsertMortgageUseCase,
     calculateMortgageOverpaymentPlanUseCase,

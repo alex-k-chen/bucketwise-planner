@@ -6,20 +6,20 @@ function buildConnectionConfig() {
     return { connectionString };
   }
 
-const requiredVars = ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'] as const;
-const missing = requiredVars.filter(v => !process.env[v]);
+  const requiredVars = ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'] as const;
+  const missing = requiredVars.filter((v) => !process.env[v]);
 
-if (missing.length > 0) {
+  if (missing.length > 0) {
     throw new Error(`Missing required PostgreSQL environment variables: ${missing.join(', ')}`);
-}
+  }
 
-return {
+  return {
     host: process.env.PGHOST!,
     port: Number(process.env.PGPORT!),
     user: process.env.PGUSER!,
     password: process.env.PGPASSWORD!,
     database: process.env.PGDATABASE!,
-};
+  };
 }
 
 export function createPgPool(): Pool {
@@ -111,8 +111,20 @@ export async function ensureSchema(pool: Pool): Promise<void> {
       CONSTRAINT uniq_skipped_payment UNIQUE (debt_id, fortnight_id)
     );
 
+    CREATE TABLE IF NOT EXISTS debt_balance_adjustments (
+      id UUID PRIMARY KEY,
+      debt_id UUID NOT NULL REFERENCES debts(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK (kind IN ('INTEREST', 'FEE', 'CHARGE', 'CREDIT')),
+      amount_cents INTEGER NOT NULL,
+      occurred_on DATE NOT NULL,
+      note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_skipped_debt_payments_debt_id ON skipped_debt_payments (debt_id);
     CREATE INDEX IF NOT EXISTS idx_skipped_debt_payments_fortnight_id ON skipped_debt_payments (fortnight_id);
+    CREATE INDEX IF NOT EXISTS idx_debt_balance_adjustments_debt_id ON debt_balance_adjustments (debt_id);
+    CREATE INDEX IF NOT EXISTS idx_debt_balance_adjustments_occurred_on ON debt_balance_adjustments (occurred_on);
 
     -- Add user_id columns via ALTER TABLE (safe for existing tables)
     ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
@@ -120,6 +132,7 @@ export async function ensureSchema(pool: Pool): Promise<void> {
     ALTER TABLE debts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
     ALTER TABLE budget_profiles ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
     ALTER TABLE skipped_debt_payments ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
+    ALTER TABLE debt_balance_adjustments ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 
     -- Create indexes on user_id columns
     CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
@@ -127,6 +140,9 @@ export async function ensureSchema(pool: Pool): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_debts_user_id ON debts(user_id);
     CREATE INDEX IF NOT EXISTS idx_budget_profiles_user_id ON budget_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_skipped_debt_payments_user_id ON skipped_debt_payments(user_id);
+    CREATE INDEX IF NOT EXISTS idx_debt_balance_adjustments_user_id ON debt_balance_adjustments(user_id);
+    CREATE INDEX IF NOT EXISTS idx_debt_balance_adjustments_user_debt_date
+      ON debt_balance_adjustments(user_id, debt_id, occurred_on DESC);
 
     -- Mortgage-specific extra fields on debts (non-breaking, optional)
     ALTER TABLE debts ADD COLUMN IF NOT EXISTS min_payment_frequency TEXT NOT NULL DEFAULT 'FORTNIGHTLY' CHECK (min_payment_frequency IN ('FORTNIGHTLY','MONTHLY'));

@@ -1,7 +1,16 @@
 import type { Request, Response } from 'express';
-import { createDebtSchema, updateDebtSchema } from '../../../application/dtos/schemas/debt.schema.js';
-import { mortgageOverpaymentQuerySchema, upsertMortgageSchema } from '../../../application/dtos/schemas/mortgage.schema.js';
+import {
+  createDebtSchema,
+  updateDebtSchema,
+} from '../../../application/dtos/schemas/debt.schema.js';
+import {
+  mortgageOverpaymentQuerySchema,
+  upsertMortgageSchema,
+} from '../../../application/dtos/schemas/mortgage.schema.js';
 import { skipDebtPaymentSchema } from '../../../application/dtos/schemas/skip-debt-payment.schema.js';
+import { recordDebtBalanceAdjustmentSchema } from '../../../application/dtos/schemas/debt-balance-adjustment.schema.js';
+import { ListDebtBalanceAdjustmentsUseCase } from '../../../application/use-cases/list-debt-balance-adjustments.use-case.js';
+import { RecordDebtBalanceAdjustmentUseCase } from '../../../application/use-cases/record-debt-balance-adjustment.use-case.js';
 import { CalculateMortgageOverpaymentPlanUseCase } from '../../../application/use-cases/calculate-mortgage-overpayment-plan.use-case.js';
 import { CreateDebtUseCase } from '../../../application/use-cases/create-debt.use-case.js';
 import { GetDebtPayoffPlanUseCase } from '../../../application/use-cases/get-debt-payoff-plan.use-case.js';
@@ -24,9 +33,11 @@ export class DebtController extends BaseController {
     private readonly listDebtsUseCase: ListDebtsUseCase,
     private readonly updateDebtUseCase: UpdateDebtUseCase,
     private readonly skipDebtPaymentUseCase: SkipDebtPaymentUseCase,
+    private readonly recordDebtBalanceAdjustmentUseCase: RecordDebtBalanceAdjustmentUseCase,
+    private readonly listDebtBalanceAdjustmentsUseCase: ListDebtBalanceAdjustmentsUseCase,
     private readonly getMortgageUseCase?: GetMortgageUseCase,
     private readonly upsertMortgageUseCase?: UpsertMortgageUseCase,
-    private readonly calculateMortgageOverpaymentPlanUseCase?: CalculateMortgageOverpaymentPlanUseCase
+    private readonly calculateMortgageOverpaymentPlanUseCase?: CalculateMortgageOverpaymentPlanUseCase,
   ) {
     super();
   }
@@ -86,6 +97,30 @@ export class DebtController extends BaseController {
     this.sendSuccess(res, result, 201);
   }
 
+  async recordBalanceAdjustment(req: Request, res: Response): Promise<void> {
+    const userId = (req as AuthenticatedRequest).user.id;
+    const debtId = req.params.id ?? '';
+    const validated = recordDebtBalanceAdjustmentSchema.parse(req.body);
+    const result = await this.recordDebtBalanceAdjustmentUseCase.execute({
+      ...validated,
+      userId,
+      debtId,
+    });
+    this.sendSuccess(res, result, 201);
+  }
+
+  async listBalanceAdjustments(req: Request, res: Response): Promise<void> {
+    const userId = (req as AuthenticatedRequest).user.id;
+    const debtId = req.params.id ?? '';
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const result = await this.listDebtBalanceAdjustmentsUseCase.execute({
+      userId,
+      debtId,
+      ...(limit !== undefined ? { limit } : {}),
+    });
+    this.sendSuccess(res, result);
+  }
+
   // Mortgage endpoints
   async getMortgage(req: Request, res: Response): Promise<void> {
     if (!this.getMortgageUseCase) throw new Error('Mortgage use case not wired');
@@ -103,10 +138,16 @@ export class DebtController extends BaseController {
   }
 
   async getMortgageOverpaymentPlan(req: Request, res: Response): Promise<void> {
-    if (!this.calculateMortgageOverpaymentPlanUseCase) throw new Error('Mortgage use case not wired');
+    if (!this.calculateMortgageOverpaymentPlanUseCase)
+      throw new Error('Mortgage use case not wired');
     const userId = (req as AuthenticatedRequest).user.id;
-    const parsed = mortgageOverpaymentQuerySchema.parse({ fortnightlyFeCents: req.query.fortnightlyFeCents });
-    const result = await this.calculateMortgageOverpaymentPlanUseCase.execute({ userId, ...parsed });
+    const parsed = mortgageOverpaymentQuerySchema.parse({
+      fortnightlyFeCents: req.query.fortnightlyFeCents,
+    });
+    const result = await this.calculateMortgageOverpaymentPlanUseCase.execute({
+      userId,
+      ...parsed,
+    });
     this.sendSuccess(res, result);
   }
 }
