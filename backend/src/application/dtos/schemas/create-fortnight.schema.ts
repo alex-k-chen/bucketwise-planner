@@ -13,7 +13,7 @@ const requiredBlowAllocations = {
 /**
  * CreateFortnightSchema: Zod schema for validating fortnight creation input.
  * Ensures allocations sum to 100% and all data is valid.
- * 
+ *
  * @example
  * ```typescript
  * const input = {
@@ -35,20 +35,20 @@ const allocationSchema = z.object({
 
 export const createFortnightSchema = z
   .object({
-    periodStart: z.coerce.date().describe('Start date of fortnight'),
-    periodEnd: z.coerce.date().describe('End date of fortnight'),
-    allocations: z
-      .array(allocationSchema)
-      .min(1)
-      .describe('Budget allocations for each bucket'),
+    periodStartLocalDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .describe('Start date of fortnight (local calendar, YYYY-MM-DD)'),
+    periodEndLocalDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .describe('End date of fortnight (local calendar, YYYY-MM-DD)'),
+    allocations: z.array(allocationSchema).min(1).describe('Budget allocations for each bucket'),
   })
-  .refine(
-    (data) => data.periodEnd > data.periodStart,
-    {
-      message: 'Period end must be after period start',
-      path: ['periodEnd'],
-    }
-  )
+  .refine((data) => data.periodEndLocalDate > data.periodStartLocalDate, {
+    message: 'Period end must be after period start',
+    path: ['periodEndLocalDate'],
+  })
   .refine(
     (data) => {
       // Enforce required Blow allocations at fixed percentages
@@ -72,7 +72,7 @@ export const createFortnightSchema = z
     {
       message: 'Allocations must include Blow buckets at 60/10/10/20 and total 100%',
       path: ['allocations'],
-    }
+    },
   );
 
 /**

@@ -4,10 +4,11 @@ import type { Repository } from './repository.interface.js';
 /**
  * FortnightSnapshotRepository defines the contract for fortnight snapshot persistence.
  */
-export interface FortnightSnapshotRepository
-  extends Repository<FortnightSnapshot, string> {
+export interface FortnightSnapshotRepository extends Repository<FortnightSnapshot, string> {
   /**
    * Find fortnight snapshot by period (start date)
    */
   findByPeriod(userId: string, periodStart: Date): Promise<FortnightSnapshot | null>;
+
+  updateTimezoneBounds(userId: string, snapshot: FortnightSnapshot): Promise<void>;
 }

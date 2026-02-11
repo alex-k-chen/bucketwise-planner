@@ -87,6 +87,9 @@ export interface FortnightDetailDTO {
   id: string;
   periodStart: string;
   periodEnd: string;
+  periodStartLocalDate?: string;
+  periodEndLocalDate?: string;
+  timezoneAtCreation?: string;
   totalIncomeCents: number;
   totalExpensesCents: number;
   bucketBreakdowns: BucketBreakdown[];
@@ -97,6 +100,9 @@ export interface ForthnightSummaryDTO {
   id: string;
   periodStart: string;
   periodEnd: string;
+  periodStartLocalDate?: string;
+  periodEndLocalDate?: string;
+  timezoneAtCreation?: string;
   totalIncomeCents: number;
   totalExpensesCents: number;
 }
@@ -221,7 +227,15 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export type PageKey = 'dashboard' | 'charts' | 'transactions' | 'debts' | 'fortnight' | 'profile' | 'ownhome' | 'general';
+export type PageKey =
+  | 'dashboard'
+  | 'charts'
+  | 'transactions'
+  | 'debts'
+  | 'fortnight'
+  | 'profile'
+  | 'ownhome'
+  | 'general';
 
 export interface PageContext {
   page: PageKey;

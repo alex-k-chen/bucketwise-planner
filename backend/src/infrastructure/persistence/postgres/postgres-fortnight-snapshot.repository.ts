@@ -60,8 +60,8 @@ function deserializeTransactions(rows: SerializedTransaction[]): Transaction[] {
         new Money(row.amountCents),
         row.description,
         new Date(row.occurredAt),
-        row.tags
-      )
+        row.tags,
+      ),
   );
 }
 
@@ -75,7 +75,16 @@ function mapRowToSnapshot(row: FortnightSnapshotRow): FortnightSnapshot {
     new Date(row.period_start),
     new Date(row.period_end),
     allocations,
-    transactions
+    transactions,
+    {
+      ...(row.period_start_local_date ? { periodStartLocalDate: row.period_start_local_date } : {}),
+      ...(row.period_end_local_date ? { periodEndLocalDate: row.period_end_local_date } : {}),
+      ...(row.timezone_at_creation ? { timezoneAtCreation: row.timezone_at_creation } : {}),
+      ...(row.period_start_utc ? { periodStartUtc: new Date(row.period_start_utc) } : {}),
+      ...(row.period_end_utc_exclusive
+        ? { periodEndUtcExclusive: new Date(row.period_end_utc_exclusive) }
+        : {}),
+    },
   );
 }
 
@@ -85,18 +94,23 @@ type FortnightSnapshotRow = {
   period_end: string | Date;
   allocations: unknown;
   transactions: unknown;
+  period_start_local_date?: string | null;
+  period_end_local_date?: string | null;
+  timezone_at_creation?: string | null;
+  period_start_utc?: string | Date | null;
+  period_end_utc_exclusive?: string | Date | null;
 };
 
-export class PostgresFortnightSnapshotRepository
-  implements FortnightSnapshotRepository
-{
+export class PostgresFortnightSnapshotRepository implements FortnightSnapshotRepository {
   constructor(private readonly pool: Pool) {}
 
   async add(userId: string, snapshot: FortnightSnapshot): Promise<void> {
     const query = `
       INSERT INTO fortnight_snapshots (
-        id, user_id, period_start, period_end, allocations, transactions, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        id, user_id, period_start, period_end, allocations, transactions,
+        period_start_utc, period_end_utc_exclusive, period_start_local_date, period_end_local_date, timezone_at_creation,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       ON CONFLICT (id) DO NOTHING;
     `;
     await this.pool.query(query, [
@@ -106,13 +120,18 @@ export class PostgresFortnightSnapshotRepository
       snapshot.periodEnd,
       JSON.stringify(serializeAllocations(snapshot.allocations)),
       JSON.stringify(serializeTransactions(snapshot.transactions)),
+      snapshot.periodStartUtc ?? null,
+      snapshot.periodEndUtcExclusive ?? null,
+      snapshot.periodStartLocalDate ?? null,
+      snapshot.periodEndLocalDate ?? null,
+      snapshot.timezoneAtCreation ?? null,
     ]);
   }
 
   async findById(userId: string, id: string): Promise<FortnightSnapshot | null> {
     const result = await this.pool.query(
       'SELECT * FROM fortnight_snapshots WHERE id = $1 AND user_id = $2',
-      [id, userId]
+      [id, userId],
     );
     if (result.rowCount === 0) return null;
     return mapRowToSnapshot(result.rows[0] as FortnightSnapshotRow);
@@ -121,7 +140,7 @@ export class PostgresFortnightSnapshotRepository
   async findByPeriod(userId: string, periodStart: Date): Promise<FortnightSnapshot | null> {
     const result = await this.pool.query(
       'SELECT * FROM fortnight_snapshots WHERE period_start = $1 AND user_id = $2',
-      [periodStart, userId]
+      [periodStart, userId],
     );
     if (result.rowCount === 0) return null;
     return mapRowToSnapshot(result.rows[0] as FortnightSnapshotRow);
@@ -130,7 +149,7 @@ export class PostgresFortnightSnapshotRepository
   async getAll(userId: string): Promise<FortnightSnapshot[]> {
     const result = await this.pool.query(
       'SELECT * FROM fortnight_snapshots WHERE user_id = $1 ORDER BY period_start ASC',
-      [userId]
+      [userId],
     );
     return result.rows.map(mapRowToSnapshot);
   }
@@ -143,6 +162,11 @@ export class PostgresFortnightSnapshotRepository
             period_end = $4,
             allocations = $5,
             transactions = $6,
+            period_start_utc = $7,
+            period_end_utc_exclusive = $8,
+            period_start_local_date = $9,
+            period_end_local_date = $10,
+            timezone_at_creation = $11,
             updated_at = NOW()
         WHERE id = $1 AND user_id = $2
       `,
@@ -153,7 +177,40 @@ export class PostgresFortnightSnapshotRepository
         snapshot.periodEnd,
         JSON.stringify(serializeAllocations(snapshot.allocations)),
         JSON.stringify(serializeTransactions(snapshot.transactions)),
-      ]
+        snapshot.periodStartUtc ?? null,
+        snapshot.periodEndUtcExclusive ?? null,
+        snapshot.periodStartLocalDate ?? null,
+        snapshot.periodEndLocalDate ?? null,
+        snapshot.timezoneAtCreation ?? null,
+      ],
+    );
+
+    if (res.rowCount === 0) {
+      throw new Error(`FortnightSnapshot ${snapshot.id} not found`);
+    }
+  }
+
+  async updateTimezoneBounds(userId: string, snapshot: FortnightSnapshot): Promise<void> {
+    const res = await this.pool.query(
+      `
+        UPDATE fortnight_snapshots
+        SET period_start_utc = $3,
+            period_end_utc_exclusive = $4,
+            period_start_local_date = $5,
+            period_end_local_date = $6,
+            timezone_at_creation = $7,
+            updated_at = NOW()
+        WHERE id = $1 AND user_id = $2
+      `,
+      [
+        snapshot.id,
+        userId,
+        snapshot.periodStartUtc ?? null,
+        snapshot.periodEndUtcExclusive ?? null,
+        snapshot.periodStartLocalDate ?? null,
+        snapshot.periodEndLocalDate ?? null,
+        snapshot.timezoneAtCreation ?? null,
+      ],
     );
 
     if (res.rowCount === 0) {
@@ -162,6 +219,9 @@ export class PostgresFortnightSnapshotRepository
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    await this.pool.query('DELETE FROM fortnight_snapshots WHERE id = $1 AND user_id = $2', [id, userId]);
+    await this.pool.query('DELETE FROM fortnight_snapshots WHERE id = $1 AND user_id = $2', [
+      id,
+      userId,
+    ]);
   }
 }

@@ -26,16 +26,22 @@ export function IncomeExpensesTrendChart() {
       }
     }
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const data = useMemo(() => {
     const transformed = fortnights
       .slice()
-      .sort((a, b) => a.periodStart.localeCompare(b.periodStart))
+      .sort((a, b) =>
+        (a.periodStartLocalDate ?? a.periodStart).localeCompare(
+          b.periodStartLocalDate ?? b.periodStart,
+        ),
+      )
       .map((f) => {
         return {
-          date: formatDate(f.periodStart),
+          date: formatDate(f.periodStartLocalDate ?? f.periodStart),
           Income: f.totalIncomeCents / 100,
           Expenses: f.totalExpensesCents / 100,
         };

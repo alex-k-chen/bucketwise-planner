@@ -2,11 +2,12 @@
 
 React + TypeScript + Vite frontend for multi-user Barefoot Investor budget management.
 
-**Attribution:** Implements Scott Pape's *Barefoot Investor* methodology ([www.barefootinvestor.com](https://www.barefootinvestor.com/))
+**Attribution:** Implements Scott Pape's _Barefoot Investor_ methodology ([www.barefootinvestor.com](https://www.barefootinvestor.com/))
 
 ## Features
 
 ### Core Views
+
 - **Dashboard**: Financial snapshot, current fortnight overview, debt summary, payoff timeline
 - **Transactions**: Record income/expenses/debt payments with bucket assignment, filtering
 - **Debts**: Debt management with snowball prioritization and automated payoff calculator
@@ -14,11 +15,13 @@ React + TypeScript + Vite frontend for multi-user Barefoot Investor budget manag
 - **Profile**: Income configuration, bucket percentages, fixed expenses
 
 ### Authentication
+
 - **Signup/Login**: JWT-based multi-user authentication
 - **Secure Sessions**: Refresh token support, local session storage
 - **User Profile**: Personal budget configuration per user
 
 ### Optional AI Chat (Disabled by Default)
+
 - **Context-Aware Responses**: AI includes relevant budget data based on current page
 - **Privacy-Focused**: No permanent chat history stored (ephemeral context)
 - **Smart Initialization**: Detects if AI is disabled and shows friendly message
@@ -28,6 +31,7 @@ React + TypeScript + Vite frontend for multi-user Barefoot Investor budget manag
 See [docs/AI_ADVISOR.md](../docs/AI_ADVISOR.md) for setup and usage.
 
 ### UX Features
+
 - **Dark Theme**: Custom Mantine theme (navy/slate + teal/amber accents)
 - **Help System**: Searchable, contextual help with keyboard shortcuts (`⌘/`)
 - **Tooltips**: Helpful hints on complex controls
@@ -36,6 +40,7 @@ See [docs/AI_ADVISOR.md](../docs/AI_ADVISOR.md) for setup and usage.
 - **Keyboard Shortcuts**: `⌘/` (Cmd+/) or `Ctrl+/` for help
 
 ### Technical Features
+
 - **Full TypeScript**: Strict mode, type-safe throughout
 - **React Hooks**: Context providers, custom hooks for state management
 - **Mantine Components**: Accessible, modern UI components
@@ -49,11 +54,13 @@ See [docs/AI_ADVISOR.md](../docs/AI_ADVISOR.md) for setup and usage.
 - **Vite 7**: Fast build tool and dev server
 - **Mantine v8.3.10**: Component library with dark theme
 - **Tabler Icons**: Icon set (@tabler/icons-react)
+
 ## AI Chat Widget
 
 Optional feature that appears in top-right header (teal chat bubble). Requires backend to have `GEMINI_API_KEY` set.
 
 **If disabled**, frontend shows a friendly message:
+
 > "AI Chat is disabled. To enable, add `GEMINI_API_KEY` to backend .env and set `AI_ENABLED=true`. See README for instructions."
 
 **Keyboard shortcut:** `⌘/` (Cmd+Slash on Mac) or `Ctrl+/` (Windows/Linux)
@@ -63,6 +70,7 @@ See [docs/AI_ADVISOR.md](../docs/AI_ADVISOR.md) for full setup and usage guide.
 ## Local Development
 
 ### Requirements
+
 - Node.js 18+
 - pnpm 8+
 - Backend running on http://localhost:3000 (or update VITE_API_BASE)
@@ -131,33 +139,39 @@ frontend/
 ## Development
 
 ### Prerequisites
+
 - Node.js 18+
 - pnpm 8+
 
 ### Setup
+
 ```bash
 cd frontend
 pnpm install
 ```
 
 ### Run Development Server
+
 ```bash
 pnpm dev
 # Opens on http://localhost:5173
 ```
 
 ### Type Check
+
 ```bash
 pnpm exec tsc --noEmit
 ```
 
 ### Build for Production
+
 ```bash
 pnpm build
 # Output in dist/
 ```
 
 ### Preview Production Build
+
 ```bash
 pnpm preview
 ```
@@ -165,6 +179,7 @@ pnpm preview
 ## Environment Variables
 
 Create `.env` file:
+
 ```env
 VITE_API_BASE=http://localhost:3000
 ```
@@ -172,7 +187,9 @@ VITE_API_BASE=http://localhost:3000
 ## Key Patterns
 
 ### Date Handling
-Always use `formatDateToISO()` from `utils/formatters.ts`:
+
+Always use `formatDateToISO()` from `utils/formatters.ts` when working with API date filters:
+
 ```typescript
 import { formatDateToISO } from '../utils/formatters';
 
@@ -181,10 +198,17 @@ const startDate = formatDateToISO(fortnightStart);
 
 // ❌ Wrong (timezone issues)
 const startDate = new Date(fortnightStart).toISOString();
+
+// ✅ Fortnight creation uses local calendar dates (YYYY-MM-DD)
+const periodStartLocalDate = `${fortnightStart.getFullYear()}-${String(
+  fortnightStart.getMonth() + 1,
+).padStart(2, '0')}-${String(fortnightStart.getDate()).padStart(2, '0')}`;
 ```
 
 ### Page Context Integration
+
 Views populate PageContextProvider when data loads:
+
 ```typescript
 import { usePageDataContext } from '../contexts/PageContextProvider';
 
@@ -201,7 +225,9 @@ useEffect(() => {
 ```
 
 ### Chat Integration
+
 ChatWidget automatically includes page context:
+
 ```typescript
 const pageContext = usePageContext();
 await sendMessage(messageText, pageContext);
@@ -211,6 +237,7 @@ await sendMessage(messageText, pageContext);
 ## Notifications and Modals
 
 ### Toast Notifications
+
 Use utility functions from `utils/notifications.ts`:
 
 ```typescript
@@ -230,6 +257,7 @@ showInfo('Fortnight starting tomorrow');
 ```
 
 ### Confirmation Modals
+
 Use pre-configured confirmation modals:
 
 ```typescript
@@ -258,6 +286,7 @@ confirmAction({
 ```
 
 ### Loading Notifications
+
 For long-running operations:
 
 ```typescript
@@ -280,6 +309,7 @@ try {
 ```
 
 ### Direct API Usage
+
 For custom notifications, use the Mantine APIs directly:
 
 ```typescript
@@ -306,12 +336,14 @@ modals.openConfirmModal({
 ## Chat Context Architecture
 
 ### Conversation History Flow
+
 1. User sends message
 2. useChat hook filters last 5 messages from state
 3. Backend further filters to 10-minute window
 4. Filtered history sent to AI with new message
 
 ### Page Context Flow
+
 1. User navigates to page
 2. App.tsx calls `setCurrentPage('transactions')`
 3. View loads data, calls `setPageData({ transactions: [...] })`
@@ -319,6 +351,7 @@ modals.openConfirmModal({
 5. ChatWidget includes in API request
 
 ### Token Management
+
 - Extracted from Gemini API's `usageMetadata`
 - Accumulated across conversation
 - Color-coded indicator:
@@ -332,6 +365,7 @@ modals.openConfirmModal({
 See [TESTING_CHAT_CONTEXT.md](../docs/TESTING_CHAT_CONTEXT.md) for comprehensive testing guide.
 
 ### Quick Checks
+
 ```bash
 # Type check
 pnpm exec tsc --noEmit
@@ -346,21 +380,25 @@ pnpm exec tsc --noEmit
 ## Troubleshooting
 
 ### Dates Not Matching
+
 - Ensure using `formatDateToISO()` everywhere
 - Check API returns ISO strings (YYYY-MM-DD)
 - Verify no timezone conversions
 
 ### Chat Context Not Sent
+
 - Check PageContextProvider wraps App
 - Verify view calls `setPageData()` when data loads
 - Check network tab for `pageContext` in request body
 
 ### Token Counter Wrong
+
 - Gemini API may not always return usage
 - Counter resets on page refresh (intentional)
 - Only accumulates when `response.tokenUsage` exists
 
 ### TypeScript Errors
+
 - Run `pnpm exec tsc --noEmit` for detailed errors
 - Check import paths use `.js` extension (ESM)
 - Verify `verbatimModuleSyntax` compatibility
@@ -411,15 +449,15 @@ export default defineConfig([
       // other options...
     },
   },
-])
+]);
 ```
 
 You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
 ```js
 // eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+import reactX from 'eslint-plugin-react-x';
+import reactDom from 'eslint-plugin-react-dom';
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -440,5 +478,5 @@ export default defineConfig([
       // other options...
     },
   },
-])
+]);
 ```

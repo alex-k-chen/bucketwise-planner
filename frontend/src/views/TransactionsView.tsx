@@ -49,7 +49,14 @@ export function TransactionsView() {
   const [selectedFortnightId, setSelectedFortnightId] = useState<string | null>(null);
   const [fortnightStartDate, setFortnightStartDate] = useState<string | null>(null);
   const [fortnightEndDate, setFortnightEndDate] = useState<string | null>(null);
-  const { state, loadTransactions } = useTransactionsData({ filters, fortnightStartDate, fortnightEndDate, pageSize, currentPage });
+  const { state, loadTransactions } = useTransactionsData({
+    filters,
+    fortnightStartDate,
+    fortnightEndDate,
+    selectedFortnightId,
+    pageSize,
+    currentPage,
+  });
   const { fortnightDetail, detailLoading, detailError, loadFortnightDetail } = useFortnightDetail();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -59,7 +66,11 @@ export function TransactionsView() {
   const [skipModalOpen, setSkipModalOpen] = useState(false);
   const [skipSubmitting, setSkipSubmitting] = useState(false);
   const [skipError, setSkipError] = useState<string>();
-  const [skipTarget, setSkipTarget] = useState<{ debtId: string; debtName: string; amountCents: number } | null>(null);
+  const [skipTarget, setSkipTarget] = useState<{
+    debtId: string;
+    debtName: string;
+    amountCents: number;
+  } | null>(null);
   const [skipReason, setSkipReason] = useState('');
   const [isHistoricalFortnight, setIsHistoricalFortnight] = useState(false);
   const [debts, setDebts] = useState<DebtDTO[]>([]);
@@ -117,7 +128,8 @@ export function TransactionsView() {
         }
         return null;
       },
-      debtId: (_value, values) => (values.debtPayment && !values.debtId ? 'Select a debt to apply this payment' : null),
+      debtId: (_value, values) =>
+        values.debtPayment && !values.debtId ? 'Select a debt to apply this payment' : null,
       occurredAt: (value) => {
         if (!value) return null;
         return normalizeDateInput(value) ? null : 'Enter a valid date and time';
@@ -226,26 +238,26 @@ export function TransactionsView() {
     setFortnightStartDate(normalizedStart);
     setFortnightEndDate(normalizedEnd);
     // Detect if fortnight is in the past (ended before today)
-    const endDate_Obj = new Date(normalizedEnd);
+    const endDate_Obj = new Date(`${normalizedEnd}T00:00:00`);
     endDate_Obj.setHours(23, 59, 59, 999);
     setIsHistoricalFortnight(endDate_Obj < new Date());
   };
 
   const isPaymentCompleted = useCallback(
     (paymentId: string) => isPaymentCompletedRaw(paymentId, selectedPayments),
-    [isPaymentCompletedRaw, selectedPayments]
+    [isPaymentCompletedRaw, selectedPayments],
   );
 
   const getPaymentStatus = useCallback(
     (paymentId: string) => getPaymentStatusRaw(paymentId, selectedPayments),
-    [getPaymentStatusRaw, selectedPayments]
+    [getPaymentStatusRaw, selectedPayments],
   );
 
   const budgetVariance = useMemo(() => calculateBudgetVariance(fortnightDetail), [fortnightDetail]);
 
   const compliance = useMemo(
     () => calculateComplianceScore(fortnightEntry, isPaymentCompleted),
-    [fortnightEntry, isPaymentCompleted]
+    [fortnightEntry, isPaymentCompleted],
   );
 
   const handleSubmit = async (values: TransactionFormValues) => {
@@ -253,9 +265,13 @@ export function TransactionsView() {
     setSubmitError(undefined);
 
     try {
-      const tags = values.debtPayment ? Array.from(new Set([...(values.tags || []), 'debt-payment'])) : values.tags;
+      const tags = values.debtPayment
+        ? Array.from(new Set([...(values.tags || []), 'debt-payment']))
+        : values.tags;
       const occurredAtDate = normalizeDateInput(values.occurredAt);
-      const occurredAtIso = occurredAtDate ? occurredAtDate.toISOString() : new Date().toISOString();
+      const occurredAtIso = occurredAtDate
+        ? occurredAtDate.toISOString()
+        : new Date().toISOString();
       await api.recordTransaction({
         sourceBucket: values.sourceBucket,
         destinationBucket: values.destinationBucket || undefined,
@@ -292,7 +308,9 @@ export function TransactionsView() {
     setEditModalOpen(true);
   };
 
-  const handleUpdateTransaction = async (values: Omit<TransactionFormValues, 'debtPayment' | 'debtId'>) => {
+  const handleUpdateTransaction = async (
+    values: Omit<TransactionFormValues, 'debtPayment' | 'debtId'>,
+  ) => {
     if (!editingTransaction) return;
 
     setEditSubmitting(true);
@@ -300,7 +318,9 @@ export function TransactionsView() {
 
     try {
       const occurredAtDate = normalizeDateInput(values.occurredAt);
-      const occurredAtIso = occurredAtDate ? occurredAtDate.toISOString() : editingTransaction.occurredAt;
+      const occurredAtIso = occurredAtDate
+        ? occurredAtDate.toISOString()
+        : editingTransaction.occurredAt;
       await api.updateTransaction(editingTransaction.id, {
         sourceBucket: values.sourceBucket,
         destinationBucket: values.destinationBucket || undefined,
@@ -394,8 +414,8 @@ export function TransactionsView() {
             occurredAt: startDateIso ? `${startDateIso}T00:00:00.000Z` : new Date().toISOString(),
             tags: ['debt-payment'],
             debtId: p.id,
-          })
-        )
+          }),
+        ),
       );
       await loadTransactions();
     } catch (err) {
@@ -422,7 +442,9 @@ export function TransactionsView() {
       const paymentDateIso = formatDateToISO(fortnightEntry.paymentDate);
       await api.skipDebtPayment(skipTarget.debtId, {
         fortnightId: selectedFortnightId,
-        paymentDate: paymentDateIso ? `${paymentDateIso}T00:00:00.000Z` : new Date(fortnightEntry.paymentDate).toISOString(),
+        paymentDate: paymentDateIso
+          ? `${paymentDateIso}T00:00:00.000Z`
+          : new Date(fortnightEntry.paymentDate).toISOString(),
         amountCents: skipTarget.amountCents,
         skipReason: skipReason.trim() || undefined,
       });
@@ -439,11 +461,13 @@ export function TransactionsView() {
   const prefillIncome = () => {
     if (!fortnightDetail) return;
     const amountCents =
-      (profile && profile.fortnightlyIncomeCents > 0 ? profile.fortnightlyIncomeCents : fortnightDetail.totalIncomeCents) || 0;
+      (profile && profile.fortnightlyIncomeCents > 0
+        ? profile.fortnightlyIncomeCents
+        : fortnightDetail.totalIncomeCents) || 0;
     form.setValues({
       bucket: 'Daily Expenses',
       kind: 'income',
-      description: `Income for fortnight starting ${formatDate(fortnightDetail.periodStart)}`,
+      description: `Income for fortnight starting ${formatDate(fortnightDetail.periodStartLocalDate ?? fortnightDetail.periodStart)}`,
       amountDollars: amountCents / 100,
       tags: ['income'],
       debtPayment: false,
@@ -452,7 +476,6 @@ export function TransactionsView() {
     });
     setAddModalOpen(true);
   };
-
 
   const prefillExpense = () => {
     form.setValues({
@@ -470,7 +493,9 @@ export function TransactionsView() {
 
   const plannedPayments = useMemo(() => getPlannedPayments(fortnightEntry), [fortnightEntry]);
   const completedPayments = plannedPayments.filter((p) => isPaymentCompleted(p.id)).length;
-  const skippedPaymentsCount = plannedPayments.filter((p) => getPaymentStatus(p.id) === 'skipped').length;
+  const skippedPaymentsCount = plannedPayments.filter(
+    (p) => getPaymentStatus(p.id) === 'skipped',
+  ).length;
 
   return (
     <Stack gap="lg" p="md">
@@ -492,7 +517,11 @@ export function TransactionsView() {
           budgetVariance={budgetVariance}
         />
 
-        <HistoricalComplianceCard visible={isHistoricalFortnight} compliance={compliance} variance={budgetVariance} />
+        <HistoricalComplianceCard
+          visible={isHistoricalFortnight}
+          compliance={compliance}
+          variance={budgetVariance}
+        />
 
         <QuickActions
           disabled={isHistoricalFortnight}
@@ -506,7 +535,10 @@ export function TransactionsView() {
       </Stack>
 
       <Group justify="space-between" align="center">
-        <FortnightSelector selectedFortnightId={selectedFortnightId} onFortnightChange={handleFortnightChange} />
+        <FortnightSelector
+          selectedFortnightId={selectedFortnightId}
+          onFortnightChange={handleFortnightChange}
+        />
         {isHistoricalFortnight && (
           <Badge color={badgeSecondary} variant="light" size="lg">
             🔒 Past Fortnight (Read-only)

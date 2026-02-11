@@ -1,28 +1,30 @@
 import type {
-    ApiResponse,
-    ChatResponseDTO,
-    DashboardDTO,
-    DebtDTO,
-    DebtPayoffPlanDTO,
-    ForthnightSummaryDTO,
-    FortnightDetailDTO,
-    MortgageDTO,
-    MortgageOverpaymentPlanDTO,
-    ProfileDTO,
-    SendChatMessageRequest,
-    SkippedDebtPaymentDTO,
-    TransactionDTO,
-    UpsertMortgageRequest,
-    CsvImportPreviewRequest,
-    CsvImportPreviewResponse,
-    CsvImportCommitRequest,
+  ApiResponse,
+  ChatResponseDTO,
+  DashboardDTO,
+  DebtDTO,
+  DebtPayoffPlanDTO,
+  ForthnightSummaryDTO,
+  FortnightDetailDTO,
+  MortgageDTO,
+  MortgageOverpaymentPlanDTO,
+  ProfileDTO,
+  SendChatMessageRequest,
+  SkippedDebtPaymentDTO,
+  TransactionDTO,
+  UpsertMortgageRequest,
+  CsvImportPreviewRequest,
+  CsvImportPreviewResponse,
+  CsvImportCommitRequest,
 } from './types.ts';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 const AUTH_BASE = import.meta.env.VITE_AUTH_BASE || '/auth';
 
-let accessToken: string | null = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-let refreshToken: string | null = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+let accessToken: string | null =
+  typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+let refreshToken: string | null =
+  typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
 
 export function setAuthTokens(tokens: { accessToken: string; refreshToken: string }): void {
   accessToken = tokens.accessToken;
@@ -68,7 +70,7 @@ async function request<T>(
   method: HttpMethod,
   body?: unknown,
   searchParams?: Record<string, string | number | undefined>,
-  retry = false
+  retry = false,
 ): Promise<T> {
   let url = `${API_BASE}${path}`;
   if (searchParams) {
@@ -164,10 +166,18 @@ async function requestAuth<T>(path: string, method: HttpMethod, body?: unknown):
 
 export const api = {
   signup: (input: { email: string; name: string; password: string }) =>
-    requestAuth<{ accessToken: string; refreshToken: string; user: { email: string; name: string } }>('/signup', 'POST', input),
+    requestAuth<{
+      accessToken: string;
+      refreshToken: string;
+      user: { email: string; name: string };
+    }>('/signup', 'POST', input),
 
   login: (input: { email: string; password: string }) =>
-    requestAuth<{ accessToken: string; refreshToken: string; user: { email: string; name: string } }>('/login', 'POST', input),
+    requestAuth<{
+      accessToken: string;
+      refreshToken: string;
+      user: { email: string; name: string };
+    }>('/login', 'POST', input),
 
   logout: () => requestAuth<{ success: boolean }>('/logout', 'POST'),
 
@@ -180,13 +190,13 @@ export const api = {
   listFortnights: () => request<ForthnightSummaryDTO[]>('/fortnights', 'GET'),
 
   createFortnight: (input: {
-    periodStart: string;
-    periodEnd: string;
+    periodStartLocalDate: string;
+    periodEndLocalDate: string;
     allocations: Array<{ bucket: string; percent: number }>;
   }) => request<{ fortnightId: string }>('/fortnights', 'POST', input),
 
-  listTransactions: (params?: { 
-    bucket?: string; 
+  listTransactions: (params?: {
+    bucket?: string;
     fortnightId?: string;
     startDate?: string;
     endDate?: string;
@@ -198,7 +208,7 @@ export const api = {
       '/transactions',
       'GET',
       undefined,
-      params || {}
+      params || {},
     ),
 
   recordTransaction: (input: {
@@ -222,7 +232,7 @@ export const api = {
       amountCents: number;
       occurredAt: string;
       tags?: string[];
-    }
+    },
   ) => request<TransactionDTO>(`/transactions/${encodeURIComponent(id)}`, 'PUT', input),
 
   deleteTransaction: (id: string) =>
@@ -231,18 +241,13 @@ export const api = {
   getDebtPayoffPlan: (
     fortnightlyFireExtinguisherCents: number,
     startDate?: Date,
-    currentFortnightId?: string
+    currentFortnightId?: string,
   ) =>
-    request<DebtPayoffPlanDTO>(
-      '/debts/payoff-plan',
-      'GET',
-      undefined,
-      { 
-        fortnightlyFireExtinguisherCents,
-        startDate: startDate ? startDate.toISOString().split('T')[0] : undefined,
-        currentFortnightId,
-      }
-    ),
+    request<DebtPayoffPlanDTO>('/debts/payoff-plan', 'GET', undefined, {
+      fortnightlyFireExtinguisherCents,
+      startDate: startDate ? startDate.toISOString().split('T')[0] : undefined,
+      currentFortnightId,
+    }),
 
   listDebts: () => request<DebtDTO[]>('/debts', 'GET'),
 
@@ -266,7 +271,7 @@ export const api = {
       interestRate: number;
       minimumPaymentCents: number;
       priority?: number;
-    }
+    },
   ) => request<{ success: boolean }>(`/debts/${encodeURIComponent(id)}`, 'PUT', input),
 
   getProfile: () => request<ProfileDTO>('/profile', 'GET'),
@@ -279,7 +284,8 @@ export const api = {
 
   // User profile (name)
   getUserProfile: () => request<{ email: string; name: string }>('/profile/user', 'GET'),
-  updateUserProfile: (input: { name: string }) => request<{ email: string; name: string }>('/profile/user', 'PUT', input),
+  updateUserProfile: (input: { name: string }) =>
+    request<{ email: string; name: string }>('/profile/user', 'PUT', input),
 
   // Profile avatar
   getProfileAvatar: () => request<{ url: string | null }>('/profile/avatar', 'GET'),
@@ -304,7 +310,7 @@ export const api = {
 
   previewTransactionCsvImport: async (
     file: File,
-    input: CsvImportPreviewRequest
+    input: CsvImportPreviewRequest,
   ): Promise<CsvImportPreviewResponse> => {
     const formData = new FormData();
     formData.append('file', file, file.name);
@@ -321,7 +327,8 @@ export const api = {
       formData.append('qifDateFormat', input.qifDateFormat);
     }
 
-    const token = accessToken || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
+    const token =
+      accessToken || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
     const response = await fetch(`${API_BASE}/transactions/import/csv/preview`, {
       method: 'POST',
       headers: {
@@ -339,11 +346,11 @@ export const api = {
   },
 
   commitTransactionCsvImport: (input: CsvImportCommitRequest) =>
-    request<{ created: number; skipped: number; failed: Array<{ rowIndex: number; message: string }> }>(
-      '/transactions/import/csv/commit',
-      'POST',
-      input
-    ),
+    request<{
+      created: number;
+      skipped: number;
+      failed: Array<{ rowIndex: number; message: string }>;
+    }>('/transactions/import/csv/commit', 'POST', input),
 
   skipDebtPayment: (
     debtId: string,
@@ -352,17 +359,18 @@ export const api = {
       paymentDate: string;
       amountCents: number;
       skipReason?: string;
-    }
-  ) => request<{ skippedPaymentId: string }>(
-    `/debts/${encodeURIComponent(debtId)}/skip-payment`,
-    'POST',
-    input
-  ),
+    },
+  ) =>
+    request<{ skippedPaymentId: string }>(
+      `/debts/${encodeURIComponent(debtId)}/skip-payment`,
+      'POST',
+      input,
+    ),
 
   listSkippedDebtPayments: (fortnightId: string) =>
     request<{ skippedPayments: SkippedDebtPaymentDTO[] }>(
       `/fortnights/${encodeURIComponent(fortnightId)}/skipped-debt-payments`,
-      'GET'
+      'GET',
     ),
 
   // Chat API
@@ -370,17 +378,13 @@ export const api = {
     request<ChatResponseDTO>('/chat/message', 'POST', input),
 
   // Mortgage API
-  getMortgage: () =>
-    request<MortgageDTO | null>('/debts/mortgage', 'GET'),
+  getMortgage: () => request<MortgageDTO | null>('/debts/mortgage', 'GET'),
 
   upsertMortgage: (input: UpsertMortgageRequest) =>
     request<{ id: string }>('/debts/mortgage', 'PUT', input),
 
   getMortgageOverpaymentPlan: (fortnightlyFeCents?: number) =>
-    request<MortgageOverpaymentPlanDTO>(
-      '/debts/mortgage/overpayment-plan',
-      'GET',
-      undefined,
-      { fortnightlyFeCents }
-    ),
+    request<MortgageOverpaymentPlanDTO>('/debts/mortgage/overpayment-plan', 'GET', undefined, {
+      fortnightlyFeCents,
+    }),
 };

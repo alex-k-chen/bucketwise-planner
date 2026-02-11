@@ -7,12 +7,26 @@ interface UseTransactionsArgs {
   filters: TransactionFilters;
   fortnightStartDate: string | null;
   fortnightEndDate: string | null;
+  selectedFortnightId?: string | null;
   pageSize: number;
   currentPage: number;
 }
 
-export const useTransactionsData = ({ filters, fortnightStartDate, fortnightEndDate, pageSize, currentPage }: UseTransactionsArgs) => {
-  const [state, setState] = useState<TransactionState>({ data: [], total: 0, limit: pageSize, offset: 0, loading: false });
+export const useTransactionsData = ({
+  filters,
+  fortnightStartDate,
+  fortnightEndDate,
+  selectedFortnightId,
+  pageSize,
+  currentPage,
+}: UseTransactionsArgs) => {
+  const [state, setState] = useState<TransactionState>({
+    data: [],
+    total: 0,
+    limit: pageSize,
+    offset: 0,
+    loading: false,
+  });
 
   const loadTransactions = useCallback(async () => {
     if (!fortnightStartDate || !fortnightEndDate) return;
@@ -25,8 +39,9 @@ export const useTransactionsData = ({ filters, fortnightStartDate, fortnightEndD
       const offset = (currentPage - 1) * pageSize;
       const response = await api.listTransactions({
         bucket: filters.bucket,
-        startDate: startDateIso,
-        endDate: endDateIso,
+        ...(selectedFortnightId
+          ? { fortnightId: selectedFortnightId }
+          : { startDate: startDateIso, endDate: endDateIso }),
         limit: pageSize,
         offset,
       });
@@ -44,7 +59,14 @@ export const useTransactionsData = ({ filters, fortnightStartDate, fortnightEndD
         loading: false,
       }));
     }
-  }, [filters.bucket, fortnightEndDate, fortnightStartDate, currentPage, pageSize]);
+  }, [
+    filters.bucket,
+    fortnightEndDate,
+    fortnightStartDate,
+    selectedFortnightId,
+    currentPage,
+    pageSize,
+  ]);
 
   return { state, setState, loadTransactions } as const;
 };

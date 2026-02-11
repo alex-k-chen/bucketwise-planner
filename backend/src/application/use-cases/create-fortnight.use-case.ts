@@ -2,7 +2,9 @@ import { ValidationError } from '../../domain/exceptions/validation-error.js';
 import { Allocation } from '../../domain/model/allocation.entity.js';
 import type { BarefootBucket } from '../../domain/model/barefoot-bucket.js';
 import { FortnightSnapshot } from '../../domain/model/fortnight-snapshot.entity.js';
+import type { BudgetProfileRepository } from '../../domain/repositories/budget-profile.repository.interface.js';
 import type { FortnightSnapshotRepository } from '../../domain/repositories/fortnight-snapshot.repository.interface.js';
+import { TimezoneService } from '../../domain/services/timezone.service.js';
 import { UseCase } from './base.use-case.js';
 
 /**
@@ -10,8 +12,8 @@ import { UseCase } from './base.use-case.js';
  */
 interface CreateFortnightInput {
   userId: string;
-  periodStart: Date;
-  periodEnd: Date;
+  periodStartLocalDate: string;
+  periodEndLocalDate: string;
   allocations: Array<{
     bucket: BarefootBucket;
     percent: number;
@@ -23,12 +25,10 @@ interface CreateFortnightOutput {
   success: boolean;
 }
 
-export class CreateFortnightUseCase extends UseCase<
-  CreateFortnightInput,
-  CreateFortnightOutput
-> {
+export class CreateFortnightUseCase extends UseCase<CreateFortnightInput, CreateFortnightOutput> {
   constructor(
-    private fortnightRepository: FortnightSnapshotRepository
+    private fortnightRepository: FortnightSnapshotRepository,
+    private budgetProfileRepository: BudgetProfileRepository,
   ) {
     super();
   }
@@ -38,11 +38,19 @@ export class CreateFortnightUseCase extends UseCase<
     const totalPercent = input.allocations.reduce((sum, a) => sum + a.percent, 0);
     if (Math.abs(totalPercent - 1.0) > 0.001) {
       throw new ValidationError(
-        `Allocations must sum to 100%, got ${(totalPercent * 100).toFixed(2)}%`
+        `Allocations must sum to 100%, got ${(totalPercent * 100).toFixed(2)}%`,
       );
     }
 
     const fortnightId = crypto.randomUUID();
+
+    const profile = await this.budgetProfileRepository.getProfile(input.userId);
+    const timezone = profile?.timezone ?? 'UTC';
+    const { startUtc, endUtcExclusive } = TimezoneService.getFortnightBoundsUtc(
+      input.periodStartLocalDate,
+      input.periodEndLocalDate,
+      timezone,
+    );
 
     // Create allocation entities
     const allocations = input.allocations.map((a) => {
@@ -53,10 +61,17 @@ export class CreateFortnightUseCase extends UseCase<
     // Create and save fortnight snapshot
     const snapshot = new FortnightSnapshot(
       fortnightId,
-      input.periodStart,
-      input.periodEnd,
+      startUtc,
+      endUtcExclusive,
       allocations,
-      [] // No transactions yet
+      [],
+      {
+        periodStartLocalDate: input.periodStartLocalDate,
+        periodEndLocalDate: input.periodEndLocalDate,
+        timezoneAtCreation: timezone,
+        periodStartUtc: startUtc,
+        periodEndUtcExclusive: endUtcExclusive,
+      },
     );
 
     await this.fortnightRepository.add(input.userId, snapshot);

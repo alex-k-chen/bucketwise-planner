@@ -17,12 +17,14 @@ import classes from './ChartsView.module.css';
 
 export function ChartsView() {
   const { openHelp } = useHelp();
-  useHotkeys([[ 'mod+/', () => openHelp('charts') ]]);
+  useHotkeys([['mod+/', () => openHelp('charts')]]);
   const { pageData, setPageData } = usePageDataContext();
 
   const [startDateStr, setStartDateStr] = useState<string | null>(null);
   const [endDateStr, setEndDateStr] = useState<string | null>(null);
-  const [currentFortnightId, setCurrentFortnightId] = useState<string | null>(pageData.fortnightId || null);
+  const [currentFortnightId, setCurrentFortnightId] = useState<string | null>(
+    pageData.fortnightId || null,
+  );
 
   // Get current fortnight ID if not in pageData
   useEffect(() => {
@@ -53,12 +55,12 @@ export function ChartsView() {
         try {
           const d = await api.getDashboard(currentFortnightId || undefined);
           if (!mounted) return;
-          console.log('Dashboard loaded:', d.currentFortnight);
           setPageData({ fortnightSnapshot: d.currentFortnight || undefined });
           if (d.currentFortnight) {
-            console.log('Setting dates:', d.currentFortnight.periodStart, d.currentFortnight.periodEnd);
-            setStartDateStr(d.currentFortnight.periodStart);
-            setEndDateStr(d.currentFortnight.periodEnd);
+            const start = d.currentFortnight.periodStartLocalDate ?? d.currentFortnight.periodStart;
+            const end = d.currentFortnight.periodEndLocalDate ?? d.currentFortnight.periodEnd;
+            setStartDateStr(start);
+            setEndDateStr(end);
           }
         } catch (error) {
           console.error('Dashboard load error:', error);
@@ -67,11 +69,19 @@ export function ChartsView() {
       }
       loadDashboard();
     }
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [currentFortnightId, setPageData]);
 
-  const startISO = useMemo(() => (startDateStr ? dayjs(startDateStr).format('YYYY-MM-DD') : undefined), [startDateStr]);
-  const endISO = useMemo(() => (endDateStr ? dayjs(endDateStr).format('YYYY-MM-DD') : undefined), [endDateStr]);
+  const startISO = useMemo(
+    () => (startDateStr ? dayjs(startDateStr).format('YYYY-MM-DD') : undefined),
+    [startDateStr],
+  );
+  const endISO = useMemo(
+    () => (endDateStr ? dayjs(endDateStr).format('YYYY-MM-DD') : undefined),
+    [endDateStr],
+  );
 
   return (
     <Grid gutter="md" grow>
@@ -106,8 +116,6 @@ export function ChartsView() {
       <Grid.Col span={{ base: 12, md: 6 }} className={classes.chartColumn}>
         <TopTagsSpendingChart key={`${startISO}-${endISO}`} startDate={startISO} endDate={endISO} />
       </Grid.Col>
-
-      
 
       <Grid.Col span={12}>
         <DebtSnowballGanttChart currentFortnightId={pageData.fortnightId} />

@@ -34,9 +34,7 @@ interface DashboardState {
 
 export function DashboardView() {
   const { openHelp } = useHelp();
-  useHotkeys([
-    ['mod+/', () => openHelp('dashboard')],
-  ]);
+  useHotkeys([['mod+/', () => openHelp('dashboard')]]);
   const { setPageData } = usePageDataContext();
   const [state, setState] = useState<DashboardState>({ loading: true });
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
@@ -120,17 +118,21 @@ export function DashboardView() {
 
   const dashboard = state.data;
 
-  const totalRecurringCents = profile?.fixedExpenses?.reduce((sum, exp) => sum + exp.amountCents, 0) ?? 0;
+  const totalRecurringCents =
+    profile?.fixedExpenses?.reduce((sum, exp) => sum + exp.amountCents, 0) ?? 0;
   const topRecurring = profile?.fixedExpenses
     ? [...profile.fixedExpenses].sort((a, b) => b.amountCents - a.amountCents).slice(0, 5)
     : [];
   const recurringShare = profile?.fortnightlyIncomeCents
     ? Math.round((totalRecurringCents / profile.fortnightlyIncomeCents) * 100)
     : 0;
-  const recurringBadgeColor = recurringShare > 70 ? 'red' : recurringShare > 50 ? 'yellow' : 'green';
+  const recurringBadgeColor =
+    recurringShare > 70 ? 'red' : recurringShare > 50 ? 'yellow' : 'green';
 
   if (!dashboard) {
-    return <EmptyState message="Nothing to display yet. Create a fortnight and add transactions." />;
+    return (
+      <EmptyState message="Nothing to display yet. Create a fortnight and add transactions." />
+    );
   }
 
   const { currentFortnight, debts } = dashboard;
@@ -141,7 +143,11 @@ export function DashboardView() {
         <Group gap="xs" align="center">
           <Title order={2}>Dashboard</Title>
           <Tooltip label="Open Dashboard help (⌘/Ctrl + /)" withArrow position="bottom">
-            <ActionIcon variant="light" onClick={() => openHelp('dashboard')} aria-label="Open help">
+            <ActionIcon
+              variant="light"
+              onClick={() => openHelp('dashboard')}
+              aria-label="Open help"
+            >
               <IconQuestionMark size={16} />
             </ActionIcon>
           </Tooltip>
@@ -266,7 +272,10 @@ export function DashboardView() {
               <div>
                 <Text fw={600}>Current Fortnight</Text>
                 <Text size="sm" c="dimmed">
-                  {formatDate(currentFortnight.periodStart)} → {formatDate(currentFortnight.periodEnd)}
+                  {formatDate(
+                    currentFortnight.periodStartLocalDate ?? currentFortnight.periodStart,
+                  )}{' '}
+                  → {formatDate(currentFortnight.periodEndLocalDate ?? currentFortnight.periodEnd)}
                 </Text>
               </div>
               <Badge color="amber" variant="light">
@@ -289,7 +298,8 @@ export function DashboardView() {
                     </Badge>
                   </Group>
                   <Text size="sm" mt="xs">
-                    Spent {formatCurrency(bucket.spentCents)} / {formatCurrency(bucket.allocatedCents)}
+                    Spent {formatCurrency(bucket.spentCents)} /{' '}
+                    {formatCurrency(bucket.allocatedCents)}
                   </Text>
                 </Card>
               ))}
@@ -304,7 +314,9 @@ export function DashboardView() {
         <Stack gap="sm">
           <Group justify="space-between" align="baseline">
             <Title order={4}>Debts</Title>
-            <Text size="sm" c="dimmed">Payoff timeline and milestones</Text>
+            <Text size="sm" c="dimmed">
+              Payoff timeline and milestones
+            </Text>
           </Group>
 
           <Stack gap="sm">

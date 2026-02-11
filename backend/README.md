@@ -2,11 +2,12 @@
 
 A **Domain-Driven Design** backend implementing the Barefoot Investor bucket-based budgeting methodology. Clean separation of concerns, swappable persistence layers, and optional AI integration.
 
-**Attribution:** Implements Scott Pape's *Barefoot Investor* methodology ([www.barefootinvestor.com](https://www.barefootinvestor.com/))
+**Attribution:** Implements Scott Pape's _Barefoot Investor_ methodology ([www.barefootinvestor.com](https://www.barefootinvestor.com/))
 
 ## Authentication & Multi-User
 
 This backend supports **multi-user JWT-based authentication**:
+
 - User signup/login endpoints
 - JWT token generation and validation
 - Refresh token support
@@ -18,6 +19,7 @@ No centralized authentication — each deployment is independent.
 ## Optional AI Advisor
 
 The AI chat feature is **optional and disabled by default**:
+
 - Requires Google AI Studio API key (free tier available)
 - Disabled if `GEMINI_API_KEY` is not set
 - Can be toggled via `AI_ENABLED` environment variable
@@ -51,11 +53,13 @@ src/
 ## Local Development Setup
 
 ### Requirements
-- Node.js 18+ 
+
+- Node.js 18+
 - pnpm 8+
 - PostgreSQL 14+
 
 ### Install Dependencies
+
 ```bash
 pnpm install
 ```
@@ -83,17 +87,19 @@ psql budgetwise -c "GRANT ALL PRIVILEGES ON DATABASE budgetwise TO budgetwise;"
 ```
 
 Then update `.env` with connection string:
+
 ```
 PG_CONNECTION_STRING=postgresql://budgetwise:your-password@localhost:5432/budgetwise
 ```
 
 ### Build & Run
-```bash
+
+````bash
 ```bash
 pnpm build              # Compile TypeScript
 pnpm dev                # Start dev server (http://localhost:3000)
 pnpm exec tsc --noEmit  # Type check
-```
+````
 
 ## AI Advisor (Optional)
 
@@ -137,6 +143,7 @@ pnpm test:coverage    # Coverage report
 ## Domain Models
 
 ### Bucket Types
+
 - **Daily Expenses** (60% of income) — Bills, groceries, essentials
 - **Splurge** (10%) — Guilt-free discretionary spending
 - **Smile** (10%) — Long-term goals and dreams
@@ -146,6 +153,7 @@ pnpm test:coverage    # Coverage report
 Percentages are configurable per user profile.
 
 ### Key Entities
+
 - `Transaction`: Record of income/expense
 - `Allocation`: Budget allocation percentages for a fortnight
 - `FortnightSnapshot`: Period summary with allocations & transactions
@@ -154,6 +162,7 @@ Percentages are configurable per user profile.
 ## Use Cases (Application Layer)
 
 ### RecordTransactionUseCase
+
 ```typescript
 await recordTxUseCase.execute({
   bucket: 'Daily Expenses',
@@ -166,10 +175,11 @@ await recordTxUseCase.execute({
 ```
 
 ### CreateFortnightUseCase
+
 ```typescript
 await createFortnightUseCase.execute({
-  periodStart: new Date('2026-01-01'),
-  periodEnd: new Date('2026-01-14'),
+  periodStartLocalDate: '2026-01-01',
+  periodEndLocalDate: '2026-01-14',
   allocations: [
     { bucket: 'Daily Expenses', percent: 0.6 },
     { bucket: 'Fire Extinguisher', percent: 0.2 },
@@ -179,25 +189,40 @@ await createFortnightUseCase.execute({
 });
 ```
 
+### Backfill Timezone Bounds (Upgrade)
+
+If upgrading from <= 0.4.0, run the backfill once to populate timezone-aware fortnight bounds:
+
+```bash
+psql "$PG_CONNECTION_STRING" < migrations/003-backfill-fortnight-timezone-bounds.sql
+# or
+pnpm db:backfill-fortnight-bounds
+```
+
 ## Domain Services
 
 ### DebtPayoffCalculator
+
 Calculate months to debt freedom using snowball or avalanche methods.
 
 ### SavingsProjector
+
 Project savings accumulation and analyze spending trends by bucket.
 
 ## Persistence Layer
 
 ### Currently Supported
+
 - **Memory** (default for local dev) - all data in-memory, lost on restart
 
 ### Future Implementations
+
 - PostgreSQL
 - SQLite
 - File-based (JSON)
 
 ### Switching Persistence Backends
+
 All repository implementations follow the same interface. To switch from memory to Postgres:
 
 ```typescript

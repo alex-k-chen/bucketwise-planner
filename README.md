@@ -3,21 +3,22 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-54%20passing-brightgreen)](https://github.com/PaulAtkins88/bucketwise-planner)
 [![Security](https://img.shields.io/badge/security-SECURITY.md-blue)](SECURITY.md)
-[![Release](https://img.shields.io/badge/release-v0.3.0-blue)](https://github.com/PaulAtkins88/bucketwise-planner/releases)
+[![Release](https://img.shields.io/badge/release-v0.4.2-blue)](https://github.com/PaulAtkins88/bucketwise-planner/releases)
 
 Multi-user budgeting app implementing Scott Pape's Barefoot Investor methodology. Fortnightly budgeting with bucket allocations (60/10/10/20), automated debt snowball payoff, transaction tracking, and optional AI financial advisor.
 
 ## 🙏 Acknowledgments
 
-This project implements the budgeting methodology created by **Scott Pape** in his book *[The Barefoot Investor](https://www.barefootinvestor.com/)*. The bucket-based allocation strategy (60% Daily Expenses, 10% Splurge, 10% Smile, 20% Fire Extinguisher) and debt snowball method are core principles from his work, which has helped millions of people take control of their finances.
+This project implements the budgeting methodology created by **Scott Pape** in his book _[The Barefoot Investor](https://www.barefootinvestor.com/)_. The bucket-based allocation strategy (60% Daily Expenses, 10% Splurge, 10% Smile, 20% Fire Extinguisher) and debt snowball method are core principles from his work, which has helped millions of people take control of their finances.
 
 **Learn more**: [www.barefootinvestor.com](https://www.barefootinvestor.com/)
 
-*This is a community-driven open-source implementation, not affiliated with or endorsed by Scott Pape or The Barefoot Investor.*
+_This is a community-driven open-source implementation, not affiliated with or endorsed by Scott Pape or The Barefoot Investor._
 
 ## 🎯 Features
 
 ### Core Functionality
+
 - **Fortnightly Budgeting**: Budget cycles aligned with income (biweekly paychecks)
 - **Bucket Allocations**: 60% Daily Expenses, 10% Splurge, 10% Smile, 20% Fire Extinguisher
 - **Debt Snowball**: Prioritize debts, automated payoff timeline with fortnightly cadence
@@ -27,6 +28,7 @@ This project implements the budgeting methodology created by **Scott Pape** in h
 - **Dashboard**: Quick overview of current fortnight, debt summary, and projections
 
 ### Optional AI Advisor 🤖
+
 - **Financial Guidance**: Personalized advice based on your live budget
 - **Barefoot-Aligned**: Trained on debt snowball and bucket methodology principles
 - **Privacy-Focused**: No chat history stored (ephemeral context only)
@@ -36,6 +38,7 @@ This project implements the budgeting methodology created by **Scott Pape** in h
 ## 🏗️ Architecture
 
 ### Backend
+
 - **Framework**: Node.js + Express v5 + TypeScript (ESM)
 - **Database**: PostgreSQL via node-postgres
 - **Architecture**: Domain-Driven Design (DDD) with clean layers
@@ -47,6 +50,7 @@ This project implements the budgeting methodology created by **Scott Pape** in h
 - **Testing**: Vitest (54+ passing tests)
 
 ### Frontend
+
 - **Framework**: React 18 + Vite 7 + TypeScript
 - **UI Library**: Mantine v8.3.10 (dark theme, navy/slate + teal/amber)
 - **State**: Type-safe API client, minimal local state
@@ -54,6 +58,7 @@ This project implements the budgeting methodology created by **Scott Pape** in h
 - **Accessibility**: Keyboard shortcuts, tooltips, dark mode
 
 ### Self-Hosted, Multi-Tenant Per Instance
+
 - Each deployment is independent (no centralized cloud)
 - Multiple users per instance via JWT authentication
 - No SaaS dependency — full data ownership
@@ -61,15 +66,19 @@ This project implements the budgeting methodology created by **Scott Pape** in h
 ## 📸 Screenshots
 
 ### Dashboard
+
 ![Dashboard](screenshots/01-dashboard.png)
 
 ### Fortnights View
+
 ![Fortnights](screenshots/02-fortnights.png)
 
 ### Debts Management
+
 ![Debts](screenshots/03-debts.png)
 
 ### Transactions Tracking
+
 ![Transactions](screenshots/04-transactions.png)
 
 ## 🚀 Quick Start
@@ -92,7 +101,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "bucketwise", "-d", "bucketwise"]
+      test: ['CMD', 'pg_isready', '-U', 'bucketwise', '-d', 'bucketwise']
       interval: 20s
       timeout: 10s
       retries: 5
@@ -115,7 +124,7 @@ services:
       AI_ENABLED: false
       # GEMINI_API_KEY: your-optional-ai-key
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,10 +138,10 @@ services:
     depends_on:
       - backend
     ports:
-      - "5555:80"
+      - '5555:80'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:80']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -208,6 +217,11 @@ ENV
 
 # Apply schema (tables, indexes, columns)
 cd backend && pnpm run db:ensure-schema
+
+# Backfill timezone-aware fortnight bounds (if upgrading from <= 0.4.0)
+psql "$PG_CONNECTION_STRING" < backend/migrations/003-backfill-fortnight-timezone-bounds.sql
+# or run the helper script:
+pnpm --filter backend db:backfill-fortnight-bounds
 ```
 
 Linux (apt-based):
@@ -233,9 +247,15 @@ ENV
 
 # Apply schema
 cd backend && pnpm run db:ensure-schema
+
+# Backfill timezone-aware fortnight bounds (if upgrading from <= 0.4.0)
+psql "$PG_CONNECTION_STRING" < backend/migrations/003-backfill-fortnight-timezone-bounds.sql
+# or run the helper script:
+pnpm --filter backend db:backfill-fortnight-bounds
 ```
 
 Notes:
+
 - You can alternatively use the Docker Compose `postgres` service in the Quick Start.
 - The schema initializer reads `PG_CONNECTION_STRING` from `backend/.env` and creates all required tables.
 - Regenerate strong secrets with: `openssl rand -base64 32`.
@@ -244,20 +264,20 @@ Notes:
 
 ### Required Environment Variables
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `PG_CONNECTION_STRING` | PostgreSQL database | `postgresql://user:pass@localhost:5432/budgetwise` |
-| `JWT_SECRET` | Session token secret (min 32 chars) | Generate with: `openssl rand -base64 32` |
-| `ADMIN_SECRET` | Admin operations secret (min 32 chars) | Generate with: `openssl rand -base64 32` |
+| Variable               | Purpose                                | Example                                            |
+| ---------------------- | -------------------------------------- | -------------------------------------------------- |
+| `PG_CONNECTION_STRING` | PostgreSQL database                    | `postgresql://user:pass@localhost:5432/budgetwise` |
+| `JWT_SECRET`           | Session token secret (min 32 chars)    | Generate with: `openssl rand -base64 32`           |
+| `ADMIN_SECRET`         | Admin operations secret (min 32 chars) | Generate with: `openssl rand -base64 32`           |
 
 ### Optional Environment Variables
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `GEMINI_API_KEY` | Google AI key (for chat feature) | (disabled) |
-| `AI_ENABLED` | Enable AI advisor | `false` |
-| `VITE_API_BASE` | Frontend API endpoint | `http://localhost:3000` |
-| `STORAGE_METHOD` | Storage method for data | `postgres` (recommended) or `memory`
+| Variable         | Purpose                          | Default                              |
+| ---------------- | -------------------------------- | ------------------------------------ |
+| `GEMINI_API_KEY` | Google AI key (for chat feature) | (disabled)                           |
+| `AI_ENABLED`     | Enable AI advisor                | `false`                              |
+| `VITE_API_BASE`  | Frontend API endpoint            | `http://localhost:3000`              |
+| `STORAGE_METHOD` | Storage method for data          | `postgres` (recommended) or `memory` |
 
 **See .env.example files for all configuration options.**
 
@@ -298,6 +318,7 @@ pnpm test:coverage # Coverage report
 ## 💻 Development Commands
 
 ### Backend
+
 ```bash
 cd backend
 pnpm dev              # Start dev server (http://localhost:3000)
@@ -308,6 +329,7 @@ pnpm exec tsc --noEmit  # Type check
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 pnpm dev              # Start Vite dev server (http://localhost:5173)
@@ -317,6 +339,7 @@ pnpm exec tsc --noEmit  # Type check
 ```
 
 ### Workspace (Root)
+
 ```bash
 pnpm install          # Install all dependencies
 pnpm exec tsc --noEmit  # Type check all packages
@@ -352,7 +375,7 @@ The app automatically calculates your payoff timeline in fortnights (2-week peri
 - **Not monthly:** Monthly budgets don't match paycheck cycles
 - **Flexible:** Create as many fortnights as you need
 - **Trackable:** See spent vs remaining per bucket each fortnight
-- **Accurate dates:** YYYY-MM-DD format prevents timezone issues
+- **Accurate dates:** Local YYYY-MM-DD stored with UTC bounds to prevent timezone issues
 
 ## 🎨 Design & UX
 
@@ -366,6 +389,7 @@ The app automatically calculates your payoff timeline in fortnights (2-week peri
 ## 📊 Tech Stack
 
 ### Backend
+
 - **Runtime:** Node.js 18+ (ESM modules)
 - **Framework:** Express v5
 - **Language:** TypeScript (strict mode)
@@ -375,6 +399,7 @@ The app automatically calculates your payoff timeline in fortnights (2-week peri
 - **Testing:** Vitest
 
 ### Frontend
+
 - **Framework:** React 18
 - **Build Tool:** Vite 7
 - **Language:** TypeScript (strict mode)
@@ -382,12 +407,14 @@ The app automatically calculates your payoff timeline in fortnights (2-week peri
 - **Icons:** Tabler Icons React
 
 ### Deployment
+
 - **Containerization:** Docker + Docker Compose
 - **Recommended Proxy:** Nginx or Caddy (TLS termination)
 
 ## 🤝 Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
 - Local development setup
 - Code style and standards
 - Testing requirements

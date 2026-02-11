@@ -39,9 +39,7 @@ interface CreateFortnightFormValues {
 
 export function FortnightView() {
   const { openHelp } = useHelp();
-  useHotkeys([
-    ['mod+/', () => openHelp('fortnight')],
-  ]);
+  useHotkeys([['mod+/', () => openHelp('fortnight')]]);
   const { setPageData } = usePageDataContext();
   const [fortnightId, setFortnightId] = useState<string>('');
   const [fortnights, setFortnights] = useState<ForthnightSummaryDTO[]>([]);
@@ -142,12 +140,14 @@ export function FortnightView() {
 
     try {
       // Ensure dates are Date objects
-      const startDate = values.periodStart instanceof Date ? values.periodStart : new Date(values.periodStart);
-      const endDate = values.periodEnd instanceof Date ? values.periodEnd : new Date(values.periodEnd);
+      const startDate =
+        values.periodStart instanceof Date ? values.periodStart : new Date(values.periodStart);
+      const endDate =
+        values.periodEnd instanceof Date ? values.periodEnd : new Date(values.periodEnd);
 
       const result = await api.createFortnight({
-        periodStart: startDate.toISOString(),
-        periodEnd: endDate.toISOString(),
+        periodStartLocalDate: formatLocalDate(startDate),
+        periodEndLocalDate: formatLocalDate(endDate),
         allocations: [
           { bucket: 'Daily Expenses', percent: 0.6 },
           { bucket: 'Splurge', percent: 0.1 },
@@ -176,7 +176,11 @@ export function FortnightView() {
         <Group gap="xs" align="center">
           <Title order={2}>Fortnight Details</Title>
           <Tooltip label="Open Fortnight help (⌘/Ctrl + /)" withArrow position="bottom">
-            <ActionIcon variant="light" onClick={() => openHelp('fortnight')} aria-label="Open help">
+            <ActionIcon
+              variant="light"
+              onClick={() => openHelp('fortnight')}
+              aria-label="Open help"
+            >
               <IconQuestionMark size={16} />
             </ActionIcon>
           </Tooltip>
@@ -205,7 +209,7 @@ export function FortnightView() {
               }}
               data={fortnights.map((f) => ({
                 value: f.id,
-                label: `${formatDate(f.periodStart)} – ${formatDate(f.periodEnd)}`,
+                label: `${formatDate(f.periodStartLocalDate ?? f.periodStart)} – ${formatDate(f.periodEndLocalDate ?? f.periodEnd)}`,
               }))}
               searchable
               clearable={false}
@@ -220,7 +224,12 @@ export function FortnightView() {
 
       {state.data && <FortnightContent fortnight={state.data} />}
 
-      <Modal opened={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Create New Fortnight" size="md">
+      <Modal
+        opened={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="Create New Fortnight"
+        size="md"
+      >
         <form onSubmit={form.onSubmit(handleCreateSubmit)}>
           <Stack gap="md">
             <EmptyState
@@ -254,7 +263,11 @@ export function FortnightView() {
             {submitError && <ErrorAlert message={submitError} />}
 
             <Group justify="flex-end">
-              <Button variant="subtle" onClick={() => setCreateModalOpen(false)} disabled={submitting}>
+              <Button
+                variant="subtle"
+                onClick={() => setCreateModalOpen(false)}
+                disabled={submitting}
+              >
                 Cancel
               </Button>
               <Button type="submit" loading={submitting}>
@@ -268,6 +281,13 @@ export function FortnightView() {
   );
 }
 
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function FortnightContent({ fortnight }: { fortnight: FortnightDetailDTO }) {
   return (
     <Stack gap="lg">
@@ -279,7 +299,8 @@ function FortnightContent({ fortnight }: { fortnight: FortnightDetailDTO }) {
                 Period
               </Text>
               <Text size="lg" fw={600}>
-                {formatDate(fortnight.periodStart)} – {formatDate(fortnight.periodEnd)}
+                {formatDate(fortnight.periodStartLocalDate ?? fortnight.periodStart)} –{' '}
+                {formatDate(fortnight.periodEndLocalDate ?? fortnight.periodEnd)}
               </Text>
             </div>
             <Badge size="lg" variant="filled" color="amber">
@@ -292,7 +313,9 @@ function FortnightContent({ fortnight }: { fortnight: FortnightDetailDTO }) {
       {fortnight.totalIncomeCents === 0 && (
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Stack gap="xs">
-            <Text size="sm" fw={600}>No income recorded for this fortnight</Text>
+            <Text size="sm" fw={600}>
+              No income recorded for this fortnight
+            </Text>
             <Text size="sm" c="dimmed">
               After creating a fortnight, record your income to allocate bucket budgets.
             </Text>

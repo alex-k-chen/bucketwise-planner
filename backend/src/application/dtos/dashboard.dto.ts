@@ -24,6 +24,9 @@ export interface DashboardDTO {
     id: string;
     periodStart: string;
     periodEnd: string;
+    periodStartLocalDate?: string;
+    periodEndLocalDate?: string;
+    timezoneAtCreation?: string;
     totalIncomeCents: number;
     totalExpensesCents: number;
     bucketBreakdowns: BucketBreakdown[];

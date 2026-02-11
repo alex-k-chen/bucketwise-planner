@@ -1,10 +1,13 @@
 import { Money } from '../../domain/model/money.js';
+import { FortnightSnapshot } from '../../domain/model/fortnight-snapshot.entity.js';
 import type { Transaction } from '../../domain/model/transaction.entity.js';
 import type { DebtRepository } from '../../domain/repositories/debt.repository.interface.js';
 import type { FortnightSnapshotRepository } from '../../domain/repositories/fortnight-snapshot.repository.interface.js';
+import type { BudgetProfileRepository } from '../../domain/repositories/budget-profile.repository.interface.js';
 import type { TransactionRepository } from '../../domain/repositories/transaction.repository.interface.js';
 import { DebtPayoffCalculator } from '../../domain/services/debt-payoff-calculator.js';
 import { SavingsProjector } from '../../domain/services/savings-projector.js';
+import { TimezoneService } from '../../domain/services/timezone.service.js';
 import type { DashboardDTO, DebtSummary } from '../dtos/dashboard.dto.js';
 import { UseCase } from './base.use-case.js';
 
@@ -19,7 +22,7 @@ interface GetDashboardRequest {
 /**
  * GetDashboardUseCase: Aggregate all financial data into single dashboard view.
  * Combines current fortnight, debts, projections, and net worth calculation.
- * 
+ *
  * @extends UseCase
  * @example
  * ```typescript
@@ -28,17 +31,15 @@ interface GetDashboardRequest {
  * console.log(`Net worth: $${dashboard.netWorthCents / 100}`);
  * ```
  */
-export class GetDashboardUseCase extends UseCase<
-  GetDashboardRequest,
-  DashboardDTO
-> {
+export class GetDashboardUseCase extends UseCase<GetDashboardRequest, DashboardDTO> {
   private debtPayoffCalculator: DebtPayoffCalculator;
   private savingsProjector: SavingsProjector;
 
   constructor(
     private fortnightSnapshotRepository: FortnightSnapshotRepository,
     private debtRepository: DebtRepository,
-    private transactionRepository?: TransactionRepository
+    private transactionRepository?: TransactionRepository,
+    private budgetProfileRepository?: BudgetProfileRepository,
   ) {
     super();
     this.debtPayoffCalculator = new DebtPayoffCalculator();
@@ -53,32 +54,43 @@ export class GetDashboardUseCase extends UseCase<
     if (request.currentFortnightId) {
       const snapshot = await this.fortnightSnapshotRepository.findById(
         request.userId,
-        request.currentFortnightId
+        request.currentFortnightId,
       );
 
       if (snapshot) {
         // Load transactions dynamically from the period (not from stale snapshot)
         let periodTransactions: Transaction[] = [];
+        const profile = this.budgetProfileRepository
+          ? await this.budgetProfileRepository.getProfile(request.userId)
+          : null;
+        const timezone = profile?.timezone ?? 'UTC';
+        const bounds = this.resolveBounds(snapshot, timezone);
+        if (bounds.repairedSnapshot) {
+          await this.fortnightSnapshotRepository.updateTimezoneBounds(
+            request.userId,
+            bounds.repairedSnapshot,
+          );
+        }
         if (this.transactionRepository) {
           const allTransactions = await this.transactionRepository.getAll(request.userId);
-          periodTransactions = allTransactions.filter(tx => {
+          periodTransactions = allTransactions.filter((tx) => {
             const txDate = tx.occurredAt;
-            return txDate >= snapshot.periodStart && txDate < snapshot.periodEnd;
+            return txDate >= bounds.startUtc && txDate < bounds.endUtcExclusive;
           });
         }
 
         // Calculate income and expenses from live transaction data
         const totalIncome = periodTransactions
-          .filter(tx => tx.kind === 'income')
+          .filter((tx) => tx.kind === 'income')
           .reduce((sum, tx) => sum.add(tx.amount), new Money(0));
 
         const totalExpenses = periodTransactions
-          .filter(tx => tx.kind === 'expense')
+          .filter((tx) => tx.kind === 'expense')
           .reduce((sum, tx) => sum.add(tx.amount), new Money(0));
 
         // Calculate Fire Extinguisher allocation
         const fireExtinguisherAllocation = snapshot.allocations.find(
-          a => a.bucket === 'Fire Extinguisher'
+          (a) => a.bucket === 'Fire Extinguisher',
         );
         fireExtinguisherCents = fireExtinguisherAllocation
           ? Math.round(totalIncome.cents * fireExtinguisherAllocation.percentage)
@@ -86,28 +98,31 @@ export class GetDashboardUseCase extends UseCase<
 
         currentFortnight = {
           id: snapshot.id,
-          periodStart: snapshot.periodStart.toISOString(),
-          periodEnd: snapshot.periodEnd.toISOString(),
+          periodStart: bounds.periodStartDisplay,
+          periodEnd: bounds.periodEndDisplay,
+          periodStartLocalDate: bounds.periodStartLocalDate,
+          periodEndLocalDate: bounds.periodEndLocalDate,
+          timezoneAtCreation: bounds.timezoneAtCreation,
           totalIncomeCents: totalIncome.cents,
           totalExpensesCents: totalExpenses.cents,
-          bucketBreakdowns: snapshot.allocations.map(allocation => {
+          bucketBreakdowns: snapshot.allocations.map((allocation) => {
             const allocatedCents = Math.round(totalIncome.cents * allocation.percentage);
-            
+
             // Calculate spent: expenses + transfers out - transfers in
             const expensesFromBucket = periodTransactions
-              .filter(tx => tx.sourceBucket === allocation.bucket && tx.kind === 'expense')
+              .filter((tx) => tx.sourceBucket === allocation.bucket && tx.kind === 'expense')
               .reduce((sum, tx) => sum.add(tx.amount), new Money(0));
-            
+
             const transfersOut = periodTransactions
-              .filter(tx => tx.sourceBucket === allocation.bucket && tx.kind === 'transfer')
+              .filter((tx) => tx.sourceBucket === allocation.bucket && tx.kind === 'transfer')
               .reduce((sum, tx) => sum.add(tx.amount), new Money(0));
-            
+
             const transfersIn = periodTransactions
-              .filter(tx => tx.destinationBucket === allocation.bucket && tx.kind === 'transfer')
+              .filter((tx) => tx.destinationBucket === allocation.bucket && tx.kind === 'transfer')
               .reduce((sum, tx) => sum.add(tx.amount), new Money(0));
-            
+
             const spent = expensesFromBucket.add(transfersOut).subtract(transfersIn);
-            
+
             const remainingCents = allocatedCents - spent.cents;
 
             return {
@@ -125,17 +140,14 @@ export class GetDashboardUseCase extends UseCase<
 
     // Get all debts and calculate payoff timeline
     const debts = await this.debtRepository.findByPriority(request.userId);
-    const totalDebtCents = debts.reduce(
-      (sum, debt) => sum + debt.currentBalance.cents,
-      0
-    );
+    const totalDebtCents = debts.reduce((sum, debt) => sum + debt.currentBalance.cents, 0);
 
     // Split debt by type: consumer (credit cards, loans) vs mortgage
     const consumerDebtCents = debts
-      .filter(d => d.debtType === 'credit-card')
+      .filter((d) => d.debtType === 'credit-card')
       .reduce((sum, debt) => sum + debt.currentBalance.cents, 0);
     const mortgageBalanceCents = debts
-      .filter(d => d.debtType === 'mortgage')
+      .filter((d) => d.debtType === 'mortgage')
       .reduce((sum, debt) => sum + debt.currentBalance.cents, 0);
 
     let debtFreeInFortnights = 0;
@@ -144,16 +156,16 @@ export class GetDashboardUseCase extends UseCase<
     if (debts.length > 0 && fireExtinguisherCents > 0) {
       const payoffPlan = this.debtPayoffCalculator.calculateSnowballFortnightly(
         debts,
-        new Money(fireExtinguisherCents)
+        new Money(fireExtinguisherCents),
       );
       debtFreeInFortnights = payoffPlan.fortnights;
 
       // Map debts to summaries with individual payoff fortnights
       debtSummaries.push(
-        ...debts.map(debt => {
+        ...debts.map((debt) => {
           // Find when this debt gets paid off in timeline
-          const payoffFortnight = payoffPlan.timeline.findIndex(fortnight =>
-            fortnight.debtsPaid.some(pd => pd.id === debt.id)
+          const payoffFortnight = payoffPlan.timeline.findIndex((fortnight) =>
+            fortnight.debtsPaid.some((pd) => pd.id === debt.id),
           );
 
           return {
@@ -166,12 +178,12 @@ export class GetDashboardUseCase extends UseCase<
             priority: debt.priority,
             monthsToPayoff: payoffFortnight >= 0 ? payoffFortnight + 1 : debtFreeInFortnights,
           };
-        })
+        }),
       );
     } else {
       // No Fire Extinguisher allocation, just map debts without payoff calculation
       debtSummaries.push(
-        ...debts.map(debt => ({
+        ...debts.map((debt) => ({
           id: debt.id,
           name: debt.name,
           debtType: debt.debtType,
@@ -180,7 +192,7 @@ export class GetDashboardUseCase extends UseCase<
           minimumPaymentCents: debt.minimumPayment.cents,
           priority: debt.priority,
           monthsToPayoff: 0, // Unknown without Fire Extinguisher
-        }))
+        })),
       );
     }
 
@@ -207,6 +219,76 @@ export class GetDashboardUseCase extends UseCase<
       totalExpensesCents,
       netWorthCents,
       projectedSavingsIn6Months,
+    };
+  }
+
+  private resolveBounds(
+    snapshot: FortnightSnapshot,
+    timezone: string,
+  ): {
+    startUtc: Date;
+    endUtcExclusive: Date;
+    periodStartDisplay: string;
+    periodEndDisplay: string;
+    periodStartLocalDate: string;
+    periodEndLocalDate: string;
+    timezoneAtCreation: string;
+    repairedSnapshot?: FortnightSnapshot;
+  } {
+    if (snapshot.periodStartUtc && snapshot.periodEndUtcExclusive) {
+      return {
+        startUtc: snapshot.periodStartUtc,
+        endUtcExclusive: snapshot.periodEndUtcExclusive,
+        periodStartDisplay: snapshot.periodStart.toISOString(),
+        periodEndDisplay: snapshot.periodEnd.toISOString(),
+        periodStartLocalDate:
+          snapshot.periodStartLocalDate ?? snapshot.periodStart.toISOString().split('T')[0]!,
+        periodEndLocalDate:
+          snapshot.periodEndLocalDate ?? snapshot.periodEnd.toISOString().split('T')[0]!,
+        timezoneAtCreation: snapshot.timezoneAtCreation ?? timezone,
+      };
+    }
+
+    const localStart =
+      snapshot.periodStartLocalDate ?? snapshot.periodStart.toISOString().split('T')[0]!;
+    let localEnd = snapshot.periodEndLocalDate ?? snapshot.periodEnd.toISOString().split('T')[0]!;
+
+    if (!snapshot.periodStartLocalDate || !snapshot.periodEndLocalDate) {
+      const endDate = new Date(localEnd);
+      endDate.setUTCDate(endDate.getUTCDate() - 1);
+      localEnd = endDate.toISOString().split('T')[0]!;
+    }
+
+    const { startUtc, endUtcExclusive } = TimezoneService.getFortnightBoundsUtc(
+      localStart,
+      localEnd,
+      timezone,
+    );
+
+    const repairedSnapshot = new FortnightSnapshot(
+      snapshot.id,
+      snapshot.periodStart,
+      snapshot.periodEnd,
+      snapshot.allocations,
+      snapshot.transactions,
+      {
+        periodStartLocalDate: localStart,
+        periodEndLocalDate: localEnd,
+        timezoneAtCreation: snapshot.timezoneAtCreation ?? timezone,
+        periodStartUtc: startUtc,
+        periodEndUtcExclusive: endUtcExclusive,
+      },
+    );
+
+    return {
+      startUtc,
+      endUtcExclusive,
+      periodStartDisplay: startUtc.toISOString(),
+      periodEndDisplay: endUtcExclusive.toISOString(),
+      periodStartLocalDate: localStart,
+      periodEndLocalDate: localEnd,
+      timezoneAtCreation: snapshot.timezoneAtCreation ?? timezone,
+      repairedSnapshot,
     };
   }
 }

@@ -20,7 +20,7 @@ export class FortnightController extends BaseController {
     private getFortnightUseCase: GetFortnightUseCase,
     private listForthnightsUseCase: ListForthnightsUseCase,
     private listTransactionsUseCase: ListTransactionsUseCase,
-    private listSkippedDebtPaymentsUseCase: ListSkippedDebtPaymentsUseCase
+    private listSkippedDebtPaymentsUseCase: ListSkippedDebtPaymentsUseCase,
   ) {
     super();
   }
@@ -35,8 +35,8 @@ export class FortnightController extends BaseController {
 
     const result = await this.createFortnightUseCase.execute({
       userId,
-      periodStart: validated.periodStart,
-      periodEnd: validated.periodEnd,
+      periodStartLocalDate: validated.periodStartLocalDate,
+      periodEndLocalDate: validated.periodEndLocalDate,
       allocations: validated.allocations,
     });
 
@@ -106,8 +106,8 @@ export class FortnightController extends BaseController {
     const offsetStr = req.query.offset as string | undefined;
 
     // Parse dates if provided
-    const startDate = startDateStr ? new Date(startDateStr) : undefined;
-    const endDate = endDateStr ? new Date(endDateStr) : undefined;
+    const startDate = startDateStr ? new Date(`${startDateStr}T00:00:00Z`) : undefined;
+    const endDate = endDateStr ? new Date(`${endDateStr}T00:00:00Z`) : undefined;
 
     // Parse pagination params
     const limit = limitStr ? Math.max(1, parseInt(limitStr, 10)) : 50;

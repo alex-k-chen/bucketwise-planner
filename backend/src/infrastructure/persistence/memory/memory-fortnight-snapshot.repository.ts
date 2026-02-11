@@ -9,13 +9,10 @@ export class MemoryFortnightSnapshotRepository
   extends InMemoryRepository<FortnightSnapshot>
   implements FortnightSnapshotRepository
 {
-
   async findByPeriod(userId: string, periodStart: Date): Promise<FortnightSnapshot | null> {
     const all = await this.getAll(userId);
     for (const snapshot of all) {
-      if (
-        snapshot.periodStart.getTime() === periodStart.getTime()
-      ) {
+      if (snapshot.periodStart.getTime() === periodStart.getTime()) {
         return snapshot;
       }
     }
@@ -24,8 +21,10 @@ export class MemoryFortnightSnapshotRepository
 
   async getAll(userId: string): Promise<FortnightSnapshot[]> {
     const all = await super.getAll(userId);
-    return all.sort(
-      (a, b) => a.periodStart.getTime() - b.periodStart.getTime()
-    );
+    return all.sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+  }
+
+  async updateTimezoneBounds(userId: string, snapshot: FortnightSnapshot): Promise<void> {
+    await this.update(userId, snapshot);
   }
 }

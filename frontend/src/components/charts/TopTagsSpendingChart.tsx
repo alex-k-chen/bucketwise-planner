@@ -7,7 +7,7 @@ import { BaseChart } from './BaseChart.js';
 
 interface TopTagsSpendingChartProps {
   startDate?: string; // YYYY-MM-DD
-  endDate?: string;   // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
   maxTags?: number;
 }
 
@@ -15,7 +15,11 @@ function canonicalize(tag: string): string {
   return tag.trim().toLowerCase();
 }
 
-export function TopTagsSpendingChart({ startDate, endDate, maxTags = 8 }: TopTagsSpendingChartProps) {
+export function TopTagsSpendingChart({
+  startDate,
+  endDate,
+  maxTags = 8,
+}: TopTagsSpendingChartProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<TransactionDTO[]>([]);
@@ -60,8 +64,14 @@ export function TopTagsSpendingChart({ startDate, endDate, maxTags = 8 }: TopTag
 
   return (
     <BaseChart
-      title={startDate && endDate ? `Top Spending Tags (${startDate} → ${endDate})` : 'Top Spending Tags'}
-      description={startDate && endDate ? 'Your highest expense tags in the current fortnight' : 'Your highest expense tags in the selected period'}
+      title={
+        startDate && endDate ? `Top Spending Tags (${startDate} → ${endDate})` : 'Top Spending Tags'
+      }
+      description={
+        startDate && endDate
+          ? 'Your highest expense tags in the current fortnight'
+          : 'Your highest expense tags in the selected period'
+      }
       loading={loading}
       error={error}
     >

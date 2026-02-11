@@ -58,7 +58,11 @@ import { ProfileController } from './controllers/profile.controller.js';
 import { TransactionController } from './controllers/transaction.controller.js';
 import { TransactionImportController } from './controllers/transaction-import.controller.js';
 import { createAuthMiddleware } from './middleware/auth.middleware.js';
-import { contentTypeMiddleware, corsPrefixMiddleware, requestLoggingMiddleware } from './middlewares/common.middleware.js';
+import {
+  contentTypeMiddleware,
+  corsPrefixMiddleware,
+  requestLoggingMiddleware,
+} from './middlewares/common.middleware.js';
 import { globalErrorMiddleware, notFoundMiddleware } from './middlewares/error.middleware.js';
 import { buildAdminRouter } from './routes/admin.routes.js';
 import { buildAuthRouter } from './routes/auth.routes.js';
@@ -90,29 +94,31 @@ export async function createApp(): Promise<Application> {
   console.log(`Storage method: ${isPostgres ? 'postgres' : 'memory'}`);
 
   // Repositories
-  const transactionRepo = isPostgres && pool
-    ? new PostgresTransactionRepository(pool)
-    : new MemoryTransactionRepository();
+  const transactionRepo =
+    isPostgres && pool
+      ? new PostgresTransactionRepository(pool)
+      : new MemoryTransactionRepository();
 
-  const fortnightRepo = isPostgres && pool
-    ? new PostgresFortnightSnapshotRepository(pool)
-    : new MemoryFortnightSnapshotRepository();
+  const fortnightRepo =
+    isPostgres && pool
+      ? new PostgresFortnightSnapshotRepository(pool)
+      : new MemoryFortnightSnapshotRepository();
 
-  const debtRepo = isPostgres && pool
-    ? new PostgresDebtRepository(pool)
-    : new MemoryDebtRepository();
+  const debtRepo =
+    isPostgres && pool ? new PostgresDebtRepository(pool) : new MemoryDebtRepository();
 
-  const skippedDebtPaymentRepo = isPostgres && pool
-    ? new PostgresSkippedDebtPaymentRepository(pool)
-    : new MemorySkippedDebtPaymentRepository();
+  const skippedDebtPaymentRepo =
+    isPostgres && pool
+      ? new PostgresSkippedDebtPaymentRepository(pool)
+      : new MemorySkippedDebtPaymentRepository();
 
-  const profileRepo = isPostgres && pool
-    ? new PostgresBudgetProfileRepository(pool)
-    : new MemoryBudgetProfileRepository();
+  const profileRepo =
+    isPostgres && pool
+      ? new PostgresBudgetProfileRepository(pool)
+      : new MemoryBudgetProfileRepository();
 
-  const userRepo = isPostgres && pool
-    ? new PostgresUserRepository(pool)
-    : new MemoryUserRepository();
+  const userRepo =
+    isPostgres && pool ? new PostgresUserRepository(pool) : new MemoryUserRepository();
 
   // Placeholder: wire real UnitOfWork when adding multi-step transactions.
   const _unitOfWork = new MemoryUnitOfWork();
@@ -121,23 +127,43 @@ export async function createApp(): Promise<Application> {
   const recordTransactionUseCase = new RecordTransactionUseCase(transactionRepo, debtRepo);
   const updateTransactionUseCase = new UpdateTransactionUseCase(transactionRepo);
   const deleteTransactionUseCase = new DeleteTransactionUseCase(transactionRepo);
-  const createFortnightUseCase = new CreateFortnightUseCase(fortnightRepo);
+  const createFortnightUseCase = new CreateFortnightUseCase(fortnightRepo, profileRepo);
   const getFortnightUseCase = new GetFortnightUseCase(fortnightRepo, transactionRepo, profileRepo);
-  const listForthnightsUseCase = new ListForthnightsUseCase(fortnightRepo, transactionRepo);
-  const listTransactionsUseCase = new ListTransactionsUseCase(transactionRepo);
+  const listForthnightsUseCase = new ListForthnightsUseCase(
+    fortnightRepo,
+    transactionRepo,
+    profileRepo,
+  );
+  const listTransactionsUseCase = new ListTransactionsUseCase(
+    transactionRepo,
+    fortnightRepo,
+    profileRepo,
+  );
   const listSkippedDebtPaymentsUseCase = new ListSkippedDebtPaymentsUseCase(skippedDebtPaymentRepo);
-  const getDebtPayoffPlanUseCase = new GetDebtPayoffPlanUseCase(debtRepo, fortnightRepo, transactionRepo);
+  const getDebtPayoffPlanUseCase = new GetDebtPayoffPlanUseCase(
+    debtRepo,
+    fortnightRepo,
+    transactionRepo,
+    profileRepo,
+  );
   const createDebtUseCase = new CreateDebtUseCase(debtRepo);
   const listDebtsUseCase = new ListDebtsUseCase(debtRepo);
   const updateDebtUseCase = new UpdateDebtUseCase(debtRepo);
   const skipDebtPaymentUseCase = new SkipDebtPaymentUseCase(debtRepo, skippedDebtPaymentRepo);
-  const getDashboardUseCase = new GetDashboardUseCase(fortnightRepo, debtRepo, transactionRepo);
+  const getDashboardUseCase = new GetDashboardUseCase(
+    fortnightRepo,
+    debtRepo,
+    transactionRepo,
+    profileRepo,
+  );
   const getProfileUseCase = new GetProfileUseCase(profileRepo);
   const upsertProfileUseCase = new UpsertProfileUseCase(profileRepo);
   // Mortgage use cases
   const getMortgageUseCase = new GetMortgageUseCase(debtRepo);
   const upsertMortgageUseCase = new UpsertMortgageUseCase(debtRepo);
-  const calculateMortgageOverpaymentPlanUseCase = new CalculateMortgageOverpaymentPlanUseCase(debtRepo);
+  const calculateMortgageOverpaymentPlanUseCase = new CalculateMortgageOverpaymentPlanUseCase(
+    debtRepo,
+  );
 
   // AI Chat feature (optional, only initialize if enabled and API key provided)
   let sendChatMessageUseCase: SendChatMessageUseCase | null = null;
@@ -152,24 +178,36 @@ export async function createApp(): Promise<Application> {
       profileRepo,
       debtRepo,
       fortnightRepo,
-      aiProvider
+      aiProvider,
     );
     console.log('AI Chat advisor enabled');
   } else if (aiEnabled && !apiKey) {
-    console.warn('AI_ENABLED=true but GEMINI_API_KEY not set. AI Chat advisor disabled. To enable, set both AI_ENABLED=true and GEMINI_API_KEY.');
+    console.warn(
+      'AI_ENABLED=true but GEMINI_API_KEY not set. AI Chat advisor disabled. To enable, set both AI_ENABLED=true and GEMINI_API_KEY.',
+    );
   }
 
   // Controllers
-  const transactionController = new TransactionController(recordTransactionUseCase, updateTransactionUseCase, deleteTransactionUseCase);
+  const transactionController = new TransactionController(
+    recordTransactionUseCase,
+    updateTransactionUseCase,
+    deleteTransactionUseCase,
+  );
   const previewCsvImportUseCase = new PreviewTransactionCsvImportUseCase(profileRepo);
-  const commitCsvImportUseCase = new CommitTransactionCsvImportUseCase(recordTransactionUseCase, transactionRepo);
-  const transactionImportController = new TransactionImportController(previewCsvImportUseCase, commitCsvImportUseCase);
+  const commitCsvImportUseCase = new CommitTransactionCsvImportUseCase(
+    recordTransactionUseCase,
+    transactionRepo,
+  );
+  const transactionImportController = new TransactionImportController(
+    previewCsvImportUseCase,
+    commitCsvImportUseCase,
+  );
   const fortnightController = new FortnightController(
     createFortnightUseCase,
     getFortnightUseCase,
     listForthnightsUseCase,
     listTransactionsUseCase,
-    listSkippedDebtPaymentsUseCase
+    listSkippedDebtPaymentsUseCase,
   );
   const debtController = new DebtController(
     getDebtPayoffPlanUseCase,
@@ -179,10 +217,14 @@ export async function createApp(): Promise<Application> {
     skipDebtPaymentUseCase,
     getMortgageUseCase,
     upsertMortgageUseCase,
-    calculateMortgageOverpaymentPlanUseCase
+    calculateMortgageOverpaymentPlanUseCase,
   );
   const dashboardController = new DashboardController(getDashboardUseCase);
-  const profileController = new ProfileController(getProfileUseCase, upsertProfileUseCase, userRepo);
+  const profileController = new ProfileController(
+    getProfileUseCase,
+    upsertProfileUseCase,
+    userRepo,
+  );
   const chatController = sendChatMessageUseCase ? new ChatController(sendChatMessageUseCase) : null;
 
   // Routers

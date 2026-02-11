@@ -17,6 +17,9 @@ export interface FortnightDetailDTO {
   id: string;
   periodStart: string; // ISO 8601
   periodEnd: string; // ISO 8601
+  periodStartLocalDate?: string;
+  periodEndLocalDate?: string;
+  timezoneAtCreation?: string;
   totalIncomeCents: number;
   totalExpensesCents: number;
   bucketBreakdowns: BucketBreakdown[];

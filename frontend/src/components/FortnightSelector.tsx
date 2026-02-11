@@ -26,62 +26,85 @@ export function FortnightSelector({
       setLoading(true);
       const data = await api.listFortnights();
       setFortnights(data);
-      
+
       // Default to most recent fortnight if none selected
       if (!selectedFortnightId && data.length > 0) {
         const latest = data[0];
-        onFortnightChange(latest.id, latest.periodStart, latest.periodEnd);
+        onFortnightChange(
+          latest.id,
+          latest.periodStartLocalDate ?? latest.periodStart,
+          latest.periodEndLocalDate ?? latest.periodEnd,
+        );
       }
     } catch (error) {
       console.error('Failed to load fortnights:', error);
     } finally {
       setLoading(false);
     }
-
   }, [selectedFortnightId, onFortnightChange]);
 
   useEffect(() => {
     loadFortnights();
   }, [loadFortnights]);
 
+  const parseLocalDate = (value: string): Date => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, (month ?? 1) - 1, day ?? 1);
+    }
+    return new Date(value);
+  };
+
   const formatFortnightLabel = (fortnight: ForthnightSummaryDTO): string => {
-    const start = new Date(fortnight.periodStart);
-    const end = new Date(fortnight.periodEnd);
-    
+    const start = parseLocalDate(fortnight.periodStartLocalDate ?? fortnight.periodStart);
+    const end = parseLocalDate(fortnight.periodEndLocalDate ?? fortnight.periodEnd);
+
     const startMonth = start.getMonth() + 1;
     const startDay = start.getDate();
     const endMonth = end.getMonth() + 1;
     const endDay = end.getDate();
-    
+
     return `${startMonth}/${startDay} - ${endMonth}/${endDay}`;
   };
 
   const handleSelectChange = (value: string | null) => {
     if (!value) return;
-    
+
     const fortnight = fortnights.find((f) => f.id === value);
     if (fortnight) {
-      onFortnightChange(fortnight.id, fortnight.periodStart, fortnight.periodEnd);
+      onFortnightChange(
+        fortnight.id,
+        fortnight.periodStartLocalDate ?? fortnight.periodStart,
+        fortnight.periodEndLocalDate ?? fortnight.periodEnd,
+      );
     }
   };
 
   const handlePrevious = () => {
     if (!selectedFortnightId || fortnights.length === 0) return;
-    
+
     const currentIndex = fortnights.findIndex((f) => f.id === selectedFortnightId);
     if (currentIndex < fortnights.length - 1) {
       const prevFortnight = fortnights[currentIndex + 1];
-      onFortnightChange(prevFortnight.id, prevFortnight.periodStart, prevFortnight.periodEnd);
+      onFortnightChange(
+        prevFortnight.id,
+        prevFortnight.periodStartLocalDate ?? prevFortnight.periodStart,
+        prevFortnight.periodEndLocalDate ?? prevFortnight.periodEnd,
+      );
     }
   };
 
   const handleNext = () => {
     if (!selectedFortnightId || fortnights.length === 0) return;
-    
+
     const currentIndex = fortnights.findIndex((f) => f.id === selectedFortnightId);
     if (currentIndex > 0) {
       const nextFortnight = fortnights[currentIndex - 1];
-      onFortnightChange(nextFortnight.id, nextFortnight.periodStart, nextFortnight.periodEnd);
+      onFortnightChange(
+        nextFortnight.id,
+        nextFortnight.periodStartLocalDate ?? nextFortnight.periodStart,
+        nextFortnight.periodEndLocalDate ?? nextFortnight.periodEnd,
+      );
     }
   };
 
