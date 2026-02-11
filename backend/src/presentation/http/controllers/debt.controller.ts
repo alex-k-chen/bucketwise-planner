@@ -103,7 +103,7 @@ export class DebtController extends BaseController {
 
   async recordBalanceAdjustment(req: Request, res: Response): Promise<void> {
     const userId = (req as AuthenticatedRequest).user.id;
-    const debtId = req.params.id ?? '';
+    const debtId = Array.isArray(req.params.id) ? (req.params.id[0] ?? '') : (req.params.id ?? '');
     const validated = req.body as RecordDebtBalanceAdjustmentInput;
     const result = await this.recordDebtBalanceAdjustmentUseCase.execute({
       ...validated,
@@ -115,7 +115,7 @@ export class DebtController extends BaseController {
 
   async listBalanceAdjustments(req: Request, res: Response): Promise<void> {
     const userId = (req as AuthenticatedRequest).user.id;
-    const debtId = req.params.id ?? '';
+    const debtId = Array.isArray(req.params.id) ? (req.params.id[0] ?? '') : (req.params.id ?? '');
     const parsed = listDebtBalanceAdjustmentsQuerySchema.parse({ limit: req.query.limit });
     const result = await this.listDebtBalanceAdjustmentsUseCase.execute({
       userId,
