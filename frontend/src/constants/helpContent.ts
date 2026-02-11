@@ -4,7 +4,8 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
   transactions: {
     key: 'transactions',
     title: 'Transactions Help',
-    description: 'Record spending, income, debt payments, and transfers between buckets for the selected fortnight.',
+    description:
+      'Record spending, income, debt payments, and transfers between buckets for the selected fortnight.',
     sections: [
       {
         title: 'Snowball Payment',
@@ -32,12 +33,32 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
       },
     ],
     quickLinks: [
-      { label: 'Record debt payment', note: 'Use Snowball/Minimum sections or Add Transaction with debt toggle' },
-      { label: 'Transfer between buckets', note: 'Add Transaction > Type: Transfer > Select source and destination buckets' },
-      { label: 'View planned payments', note: 'Snowball and Minimum Payments in This Fortnight\'s Plan' },
-      { label: 'Filter transactions', note: 'Search box and bucket dropdown in Actual Transactions' },
+      {
+        label: 'Record debt payment',
+        note: 'Use Snowball/Minimum sections or Add Transaction with debt toggle',
+      },
+      {
+        label: 'Transfer between buckets',
+        note: 'Add Transaction > Type: Transfer > Select source and destination buckets',
+      },
+      {
+        label: 'View planned payments',
+        note: "Snowball and Minimum Payments in This Fortnight's Plan",
+      },
+      {
+        label: 'Filter transactions',
+        note: 'Search box and bucket dropdown in Actual Transactions',
+      },
     ],
-    tags: ['transactions', 'debt payments', 'income', 'expense', 'transfer', 'buckets', 'fire extinguisher'],
+    tags: [
+      'transactions',
+      'debt payments',
+      'income',
+      'expense',
+      'transfer',
+      'buckets',
+      'fire extinguisher',
+    ],
   },
   dashboard: {
     key: 'dashboard',
@@ -79,22 +100,22 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
     sections: [
       {
         title: 'Debt Payoff Timeline',
-        body: 'Shows total debt remaining per fortnight based on your current Fire Extinguisher amount. Celebrate milestones as debts hit zero.'
+        body: 'Shows total debt remaining per fortnight based on your current Fire Extinguisher amount. Celebrate milestones as debts hit zero.',
       },
       {
         title: 'Top Spending Tags',
-        body: 'Breaks down your highest expense tags over a selected period to spotlight habits and optimization opportunities.'
+        body: 'Breaks down your highest expense tags over a selected period to spotlight habits and optimization opportunities.',
       },
       {
         title: 'Date Range Controls',
-        body: 'Use the start/end date pickers to filter transaction-driven charts like tags analytics.'
-      }
+        body: 'Use the start/end date pickers to filter transaction-driven charts like tags analytics.',
+      },
     ],
     quickLinks: [
       { label: 'Adjust Fire Extinguisher', note: 'Tune Profile to see payoff curve changes' },
       { label: 'Explore top tags', note: 'Set date range and inspect your highest expenses' },
     ],
-    tags: ['charts', 'analytics', 'tags', 'debt payoff', 'fortnight', 'barefoot']
+    tags: ['charts', 'analytics', 'tags', 'debt payoff', 'fortnight', 'barefoot'],
   },
   fortnight: {
     key: 'fortnight',
@@ -123,7 +144,10 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
       },
     ],
     quickLinks: [
-      { label: 'Create a new fortnight', note: 'Set period dates and auto-apply Barefoot allocations' },
+      {
+        label: 'Create a new fortnight',
+        note: 'Set period dates and auto-apply Barefoot allocations',
+      },
       { label: 'Review allocations', note: 'Confirm buckets sum to 100% for the period' },
     ],
     tags: ['fortnight', 'allocations', 'periods', 'snapshots'],
@@ -143,15 +167,11 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
       },
       {
         title: 'Fire Extinguisher Input',
-        body: 'Configure the Fire Extinguisher amount (fortnightly by default) to size the snowball payment.',
+        body: 'Configure the Fire Extinguisher amount (fortnightly by default). Fortnight ≠ half a month, so monthly → fortnight = amount × (12/26).',
       },
       {
-        title: 'Payment Frequency Conversion',
-        body: 'Fortnight ≠ half a month. To preserve annual totals: monthly → fortnight = amount × (12/26); fortnight → monthly = amount × (26/12). This ensures minimums and FE amounts align with 12 months vs 26 fortnights per year.',
-      },
-      {
-        title: 'Recording Payments',
-        body: 'Use Record Payment to log a debt-payment transaction and update balances; adds debt-payment tags.',
+        title: 'Payments vs Adjustments',
+        body: 'Record Payment logs a debt-payment transaction (affects buckets). Adjust Balance captures lender-applied changes like interest or fees without touching buckets.',
       },
       {
         title: 'Plan Refresh',
@@ -161,10 +181,9 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
     quickLinks: [
       { label: 'Add a debt', note: 'Enter balances, rate, minimum, and priority' },
       { label: 'Record a payment', note: 'Log a debt-payment transaction to reduce balance' },
-      { label: 'Understand frequency math', note: 'Monthly × 12/26; Fortnight × 26/12' },
-      { label: 'Adjust priorities', note: 'Reorder debts to change snowball sequence' },
+      { label: 'Adjust balance', note: 'Record interest, fees, or charges without buckets' },
     ],
-    tags: ['debts', 'snowball', 'payments', 'minimums', 'fire extinguisher'],
+    tags: ['debts', 'snowball', 'payments', 'adjustments', 'interest'],
   },
   profile: {
     key: 'profile',
@@ -202,7 +221,8 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
   ownhome: {
     key: 'ownhome',
     title: 'Own Your Home Help',
-    description: 'Visualize how Fire Extinguisher overpayments accelerate mortgage payoff after credit cards are eliminated.',
+    description:
+      'Visualize how Fire Extinguisher overpayments accelerate mortgage payoff after credit cards are eliminated.',
     sections: [
       {
         title: 'Baseline vs Fire Extinguisher',
@@ -230,7 +250,15 @@ export const helpContent: Record<HelpPageKey, HelpPageContent> = {
       { label: 'View credit card payoff', note: 'See Debts page for snowball timeline' },
       { label: 'Mortgage details', note: 'Debts page shows current mortgage balance and rate' },
     ],
-    tags: ['mortgage', 'own your home', 'fire extinguisher', 'overpayment', 'interest', 'payoff', 'grow bucket'],
+    tags: [
+      'mortgage',
+      'own your home',
+      'fire extinguisher',
+      'overpayment',
+      'interest',
+      'payoff',
+      'grow bucket',
+    ],
   },
   chat: {
     key: 'chat',

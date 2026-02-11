@@ -130,6 +130,17 @@ export interface DebtDTO {
   priority: number;
 }
 
+export type DebtBalanceAdjustmentKind = 'INTEREST' | 'FEE' | 'CHARGE' | 'CREDIT';
+
+export interface DebtBalanceAdjustmentDTO {
+  id: string;
+  debtId: string;
+  kind: DebtBalanceAdjustmentKind;
+  amountCents: number;
+  occurredOn: string;
+  note?: string | undefined;
+}
+
 export interface DashboardDTO {
   currentFortnight?: FortnightDetailDTO | null;
   debts: DebtSummary[];

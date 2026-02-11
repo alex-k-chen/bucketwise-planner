@@ -3,6 +3,8 @@ import type {
   ChatResponseDTO,
   DashboardDTO,
   DebtDTO,
+  DebtBalanceAdjustmentDTO,
+  DebtBalanceAdjustmentKind,
   DebtPayoffPlanDTO,
   ForthnightSummaryDTO,
   FortnightDetailDTO,
@@ -273,6 +275,29 @@ export const api = {
       priority?: number;
     },
   ) => request<{ success: boolean }>(`/debts/${encodeURIComponent(id)}`, 'PUT', input),
+
+  recordDebtBalanceAdjustment: (
+    debtId: string,
+    input: {
+      kind: DebtBalanceAdjustmentKind;
+      amountCents: number;
+      occurredOn?: string;
+      note?: string;
+    },
+  ) =>
+    request<{ currentBalanceCents: number }>(
+      `/debts/${encodeURIComponent(debtId)}/balance-adjustments`,
+      'POST',
+      input,
+    ),
+
+  listDebtBalanceAdjustments: (debtId: string, limit?: number) =>
+    request<{ adjustments: DebtBalanceAdjustmentDTO[] }>(
+      `/debts/${encodeURIComponent(debtId)}/balance-adjustments`,
+      'GET',
+      undefined,
+      { limit },
+    ),
 
   getProfile: () => request<ProfileDTO>('/profile', 'GET'),
 

@@ -90,3 +90,6 @@ dist.tar.gz
 backend/backups/
 
 docker-compose-local.yml
+opencode.json
+deploy.sh
+AGENTS.md

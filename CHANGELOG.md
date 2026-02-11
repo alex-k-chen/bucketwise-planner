@@ -5,6 +5,21 @@ All notable changes to Bucketwise Planner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-02-12
+
+### Added
+
+- Debt balance adjustments (interest/fees/charges/credits) with dedicated audit records
+- Debts UI action to record balance adjustments without affecting buckets
+
+### Changed
+
+- Credit card balances can exceed original amounts (mortgage rule unchanged)
+
+### Migration Notes
+
+1. New table `debt_balance_adjustments` is created automatically on startup
+
 ## [0.4.2] - 2026-02-11
 
 ### Fixed

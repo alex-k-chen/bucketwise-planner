@@ -1,34 +1,39 @@
 import {
-    ActionIcon,
-    Alert,
-    Badge,
-    Button,
-    Card,
-    Group,
-    Modal,
-    NumberInput,
-    SegmentedControl,
-    SimpleGrid,
-    Stack,
-    Table,
-    Text,
-    TextInput,
-    Title,
-    Tooltip,
+  ActionIcon,
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Group,
+  Modal,
+  NumberInput,
+  SegmentedControl,
+  SimpleGrid,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Title,
+  Tooltip,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDebouncedValue, useHotkeys } from '@mantine/hooks';
 import { IconBulb, IconQuestionMark } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
-import type { DebtDTO, DebtPayoffPlanDTO, ProfileDTO } from '../api/types.js';
+import type {
+  DebtBalanceAdjustmentKind,
+  DebtDTO,
+  DebtPayoffPlanDTO,
+  ProfileDTO,
+} from '../api/types.js';
 import { DebtPayoffMilestones } from '../components/charts/DebtPayoffMilestones.js';
 import { DebtSnowballGanttChart } from '../components/charts/DebtSnowballGanttChart.js';
 import { ErrorAlert } from '../components/ErrorAlert.js';
 import { useHelp } from '../components/help/useHelp.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { usePageDataContext } from '../contexts/usePageDataContext.ts';
-import { formatCurrency } from '../utils/formatters.js';
+import { formatCurrency, formatDateToISO } from '../utils/formatters.js';
 
 const bucketOptions = [
   'Daily Expenses',
@@ -61,11 +66,16 @@ interface DebtFormValues {
   priority: number;
 }
 
+interface BalanceAdjustmentFormValues {
+  kind: DebtBalanceAdjustmentKind;
+  amountDollars: number;
+  occurredOn: string;
+  note: string;
+}
+
 export function DebtsView() {
   const { openHelp } = useHelp();
-  useHotkeys([
-    ['mod+/', () => openHelp('debts')],
-  ]);
+  useHotkeys([['mod+/', () => openHelp('debts')]]);
   const { setPageData } = usePageDataContext();
   const [fireExtinguisherDollars, setFireExtinguisherDollars] = useState<number>(500);
   const [frequency, setFrequency] = useState<'fortnight' | 'month'>('fortnight');
@@ -85,8 +95,16 @@ export function DebtsView() {
   const [recordSubmitting, setRecordSubmitting] = useState(false);
   const [recordError, setRecordError] = useState<string>();
   const [recordDebt, setRecordDebt] = useState<DebtDTO | null>(null);
+  const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+  const [adjustSubmitting, setAdjustSubmitting] = useState(false);
+  const [adjustError, setAdjustError] = useState<string>();
+  const [adjustDebt, setAdjustDebt] = useState<DebtDTO | null>(null);
 
-  const recordForm = useForm<{ description: string; amountDollars: number; bucket: (typeof bucketOptions)[number] }>({
+  const recordForm = useForm<{
+    description: string;
+    amountDollars: number;
+    bucket: (typeof bucketOptions)[number];
+  }>({
     initialValues: {
       description: '',
       amountDollars: 0,
@@ -111,10 +129,35 @@ export function DebtsView() {
     validate: {
       name: (v) => (!v.trim() ? 'Name is required' : null),
       originalAmountDollars: (v) => (v <= 0 ? 'Original amount must be > 0' : null),
-      currentBalanceDollars: (v, values) => (v < 0 ? 'Balance cannot be negative' : v > values.originalAmountDollars ? 'Balance cannot exceed original' : null),
-      interestRatePercent: (v) => (v < 0 ? 'Rate cannot be negative' : v > 36 ? 'Rate too high' : null),
+      currentBalanceDollars: (v, values) => {
+        if (v < 0) return 'Balance cannot be negative';
+        if (values.debtType === 'mortgage' && v > values.originalAmountDollars) {
+          return 'Mortgage balance cannot exceed original';
+        }
+        return null;
+      },
+      interestRatePercent: (v) =>
+        v < 0 ? 'Rate cannot be negative' : v > 36 ? 'Rate too high' : null,
       minimumPaymentDollars: (v) => (v < 0 ? 'Minimum payment cannot be negative' : null),
-      priority: (v, values) => (values.debtType === 'mortgage' && v < 5 ? 'Mortgage priority must be >= 5' : v < 0 ? 'Priority cannot be negative' : null),
+      priority: (v, values) =>
+        values.debtType === 'mortgage' && v < 5
+          ? 'Mortgage priority must be >= 5'
+          : v < 0
+            ? 'Priority cannot be negative'
+            : null,
+    },
+  });
+
+  const adjustForm = useForm<BalanceAdjustmentFormValues>({
+    initialValues: {
+      kind: 'INTEREST',
+      amountDollars: 0,
+      occurredOn: formatDateToISO(new Date()),
+      note: '',
+    },
+    validate: {
+      amountDollars: (v) => (v <= 0 ? 'Amount must be greater than 0' : null),
+      occurredOn: (v) => (!v ? 'Date is required' : null),
     },
   });
 
@@ -192,7 +235,7 @@ export function DebtsView() {
     if (debtsState.items.length > 0) {
       // For debts list view, we could send all debts or the priority 1 debt
       // For context, sending priority 1 (the debt being paid) is most useful
-      const priorityDebt = debtsState.items.find(d => d.priority === 1);
+      const priorityDebt = debtsState.items.find((d) => d.priority === 1);
       if (priorityDebt) {
         setPageData({
           specificDebt: priorityDebt,
@@ -207,10 +250,17 @@ export function DebtsView() {
 
     setState((prev) => ({ ...prev, loading: true, error: undefined }));
     try {
-      const data = await api.getDebtPayoffPlan(monthlyCents, new Date(), currentFortnightId ?? undefined);
+      const data = await api.getDebtPayoffPlan(
+        monthlyCents,
+        new Date(),
+        currentFortnightId ?? undefined,
+      );
       setState({ data, loading: false });
     } catch (err) {
-      setState({ error: err instanceof Error ? err.message : 'Failed to load payoff plan', loading: false });
+      setState({
+        error: err instanceof Error ? err.message : 'Failed to load payoff plan',
+        loading: false,
+      });
     }
   }, [monthlyCents, currentFortnightId]);
 
@@ -260,6 +310,45 @@ export function DebtsView() {
     }
   };
 
+  const openAdjustBalance = (debt: DebtDTO) => {
+    setAdjustDebt(debt);
+    adjustForm.setValues({
+      kind: 'INTEREST',
+      amountDollars: 0,
+      occurredOn: formatDateToISO(new Date()),
+      note: '',
+    });
+    setAdjustError(undefined);
+    setAdjustModalOpen(true);
+  };
+
+  const submitAdjustBalance = async () => {
+    if (!adjustDebt) return;
+    const validation = adjustForm.validate();
+    if (validation.hasErrors) return;
+
+    setAdjustSubmitting(true);
+    setAdjustError(undefined);
+
+    try {
+      await api.recordDebtBalanceAdjustment(adjustDebt.id, {
+        kind: adjustForm.values.kind,
+        amountCents: Math.round(adjustForm.values.amountDollars * 100),
+        occurredOn: formatDateToISO(adjustForm.values.occurredOn),
+        note: adjustForm.values.note?.trim() || undefined,
+      });
+
+      setAdjustModalOpen(false);
+      setAdjustDebt(null);
+      loadDebts();
+      await refreshPayoffPlan();
+    } catch (err) {
+      setAdjustError(err instanceof Error ? err.message : 'Failed to adjust balance');
+    } finally {
+      setAdjustSubmitting(false);
+    }
+  };
+
   return (
     <Stack gap="lg" p="md">
       <Group justify="space-between" align="center">
@@ -298,7 +387,11 @@ export function DebtsView() {
           />
 
           <NumberInput
-            label={frequency === 'fortnight' ? 'Fortnightly Fire Extinguisher (AUD)' : 'Monthly Fire Extinguisher (AUD)'}
+            label={
+              frequency === 'fortnight'
+                ? 'Fortnightly Fire Extinguisher (AUD)'
+                : 'Monthly Fire Extinguisher (AUD)'
+            }
             description={
               frequency === 'fortnight'
                 ? 'Amount you allocate every fortnight; will be converted to monthly for the payoff calculator'
@@ -319,14 +412,17 @@ export function DebtsView() {
           </Text>
 
           <Alert icon={<IconBulb size={16} />} color="yellow" variant="light" radius="md">
-            To keep annual totals consistent: monthly → fortnight = amount × (12/26); fortnight → monthly = amount × (26/12).
+            To keep annual totals consistent: monthly → fortnight = amount × (12/26); fortnight →
+            monthly = amount × (26/12).
           </Alert>
 
           {profile && profile.defaultFireExtinguisherAmountCents > 0 && (
             <Group justify="space-between" align="center">
               <Text size="sm" c="dimmed">
-                From profile: {formatCurrency(profile.defaultFireExtinguisherAmountCents)} per fortnight →
-                {formatCurrency(Math.round(profile.defaultFireExtinguisherAmountCents * (26 / 12)))} per month
+                From profile: {formatCurrency(profile.defaultFireExtinguisherAmountCents)} per
+                fortnight →
+                {formatCurrency(Math.round(profile.defaultFireExtinguisherAmountCents * (26 / 12)))}{' '}
+                per month
               </Text>
               <Button
                 variant="light"
@@ -353,7 +449,9 @@ export function DebtsView() {
           </Group>
 
           {debtsState.loading && <LoadingSpinner />}
-          {debtsState.error && <ErrorAlert title="Error loading debts" message={debtsState.error} />}
+          {debtsState.error && (
+            <ErrorAlert title="Error loading debts" message={debtsState.error} />
+          )}
 
           {!debtsState.loading && !debtsState.error && debtsState.items.length === 0 && (
             <Text size="sm" c="dimmed">
@@ -372,8 +470,16 @@ export function DebtsView() {
                   <Table.Th>
                     <Group gap={6} align="center">
                       <Text>Min Payment</Text>
-                      <Tooltip withArrow position="bottom" label="Monthly minimums convert to fortnightly using × (12/26) in the timeline.">
-                        <ActionIcon variant="subtle" aria-label="Minimum payment conversion info" size="sm">
+                      <Tooltip
+                        withArrow
+                        position="bottom"
+                        label="Monthly minimums convert to fortnightly using × (12/26) in the timeline."
+                      >
+                        <ActionIcon
+                          variant="subtle"
+                          aria-label="Minimum payment conversion info"
+                          size="sm"
+                        >
                           <IconBulb size={14} />
                         </ActionIcon>
                       </Tooltip>
@@ -400,7 +506,8 @@ export function DebtsView() {
                         </Group>
                         {debt.minPaymentFrequency === 'MONTHLY' && (
                           <Text size="xs" c="dimmed">
-                            ≈ {formatCurrency(Math.round(debt.minimumPaymentCents * (12 / 26)))} per fortnight
+                            ≈ {formatCurrency(Math.round(debt.minimumPaymentCents * (12 / 26)))} per
+                            fortnight
                           </Text>
                         )}
                       </Stack>
@@ -410,6 +517,9 @@ export function DebtsView() {
                       <Group gap="xs">
                         <Button size="xs" variant="light" onClick={() => openRecordPayment(debt)}>
                           Record Payment
+                        </Button>
+                        <Button size="xs" variant="subtle" onClick={() => openAdjustBalance(debt)}>
+                          Adjust Balance
                         </Button>
                         <Button
                           size="xs"
@@ -445,10 +555,7 @@ export function DebtsView() {
       {state.error && <ErrorAlert title="Error loading payoff plan" message={state.error} />}
 
       {state.data && (
-        <PayoffPlanContent
-          plan={state.data}
-          currentFortnightId={currentFortnightId ?? undefined}
-        />
+        <PayoffPlanContent plan={state.data} currentFortnightId={currentFortnightId ?? undefined} />
       )}
 
       <Modal
@@ -465,7 +572,9 @@ export function DebtsView() {
           <SegmentedControl
             fullWidth
             value={recordForm.values.bucket}
-            onChange={(value) => recordForm.setFieldValue('bucket', value as (typeof bucketOptions)[number])}
+            onChange={(value) =>
+              recordForm.setFieldValue('bucket', value as (typeof bucketOptions)[number])
+            }
             data={bucketOptions.map((bucket) => ({ label: bucket, value: bucket }))}
           />
 
@@ -484,7 +593,11 @@ export function DebtsView() {
           {recordError && <ErrorAlert message={recordError} />}
 
           <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setRecordModalOpen(false)} disabled={recordSubmitting}>
+            <Button
+              variant="subtle"
+              onClick={() => setRecordModalOpen(false)}
+              disabled={recordSubmitting}
+            >
               Cancel
             </Button>
             <Button onClick={submitRecordPayment} loading={recordSubmitting} disabled={!recordDebt}>
@@ -494,7 +607,69 @@ export function DebtsView() {
         </Stack>
       </Modal>
 
-      <Modal opened={addModalOpen} onClose={() => setAddModalOpen(false)} title="Add Debt" size="lg">
+      <Modal
+        opened={adjustModalOpen}
+        onClose={() => setAdjustModalOpen(false)}
+        title={adjustDebt ? `Adjust balance for ${adjustDebt.name}` : 'Adjust balance'}
+        size="md"
+      >
+        <Stack gap="md">
+          <SegmentedControl
+            fullWidth
+            value={adjustForm.values.kind}
+            onChange={(value) =>
+              adjustForm.setFieldValue('kind', value as DebtBalanceAdjustmentKind)
+            }
+            data={[
+              { label: 'Interest', value: 'INTEREST' },
+              { label: 'Fee', value: 'FEE' },
+              { label: 'Charge', value: 'CHARGE' },
+              { label: 'Credit', value: 'CREDIT' },
+            ]}
+          />
+
+          <NumberInput
+            label="Amount (AUD)"
+            required
+            min={0}
+            decimalScale={2}
+            fixedDecimalScale
+            prefix="$"
+            {...adjustForm.getInputProps('amountDollars')}
+          />
+
+          <TextInput
+            label="Date"
+            type="date"
+            required
+            {...adjustForm.getInputProps('occurredOn')}
+          />
+
+          <TextInput label="Note (optional)" {...adjustForm.getInputProps('note')} />
+
+          {adjustError && <ErrorAlert message={adjustError} />}
+
+          <Group justify="flex-end">
+            <Button
+              variant="subtle"
+              onClick={() => setAdjustModalOpen(false)}
+              disabled={adjustSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={submitAdjustBalance} loading={adjustSubmitting} disabled={!adjustDebt}>
+              Save Adjustment
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        title="Add Debt"
+        size="lg"
+      >
         <form
           onSubmit={debtForm.onSubmit(async (values) => {
             setAddSubmitting(true);
@@ -591,7 +766,11 @@ export function DebtsView() {
             {addError && <ErrorAlert message={addError} />}
 
             <Group justify="flex-end">
-              <Button variant="subtle" onClick={() => setAddModalOpen(false)} disabled={addSubmitting}>
+              <Button
+                variant="subtle"
+                onClick={() => setAddModalOpen(false)}
+                disabled={addSubmitting}
+              >
                 Cancel
               </Button>
               <Button type="submit" loading={addSubmitting}>
@@ -602,7 +781,12 @@ export function DebtsView() {
         </form>
       </Modal>
 
-      <Modal opened={editModalOpen} onClose={() => setEditModalOpen(false)} title="Edit Debt" size="lg">
+      <Modal
+        opened={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Debt"
+        size="lg"
+      >
         <form
           onSubmit={debtForm.onSubmit(async (values) => {
             if (!editingDebtId) return;
@@ -700,7 +884,11 @@ export function DebtsView() {
             {editError && <ErrorAlert message={editError} />}
 
             <Group justify="flex-end">
-              <Button variant="subtle" onClick={() => setEditModalOpen(false)} disabled={editSubmitting}>
+              <Button
+                variant="subtle"
+                onClick={() => setEditModalOpen(false)}
+                disabled={editSubmitting}
+              >
                 Cancel
               </Button>
               <Button type="submit" loading={editSubmitting}>
@@ -714,7 +902,13 @@ export function DebtsView() {
   );
 }
 
-function PayoffPlanContent({ plan, currentFortnightId }: { plan: DebtPayoffPlanDTO; currentFortnightId?: string }) {
+function PayoffPlanContent({
+  plan,
+  currentFortnightId,
+}: {
+  plan: DebtPayoffPlanDTO;
+  currentFortnightId?: string;
+}) {
   const { totalFortnightsToPayoff, totalInterestCents, timeline } = plan;
 
   return (
@@ -775,7 +969,7 @@ function PayoffPlanContent({ plan, currentFortnightId }: { plan: DebtPayoffPlanD
                         </Badge>
                         {period.debtsPaidOffThisMonth.length > 0 && (
                           <Text size="xs" c="green" fw={500}>
-                            + {period.debtsPaidOffThisMonth.map(d => d.name).join(', ')} paid off!
+                            + {period.debtsPaidOffThisMonth.map((d) => d.name).join(', ')} paid off!
                           </Text>
                         )}
                       </Group>
@@ -804,11 +998,15 @@ function PayoffPlanContent({ plan, currentFortnightId }: { plan: DebtPayoffPlanD
                     </Text>
                   </Table.Td>
                 </Table.Tr>
-                
+
                 {/* Minimum payments on other debts */}
-                {period.minimumPaymentsOnOtherDebts && period.minimumPaymentsOnOtherDebts.length > 0 && (
+                {period.minimumPaymentsOnOtherDebts &&
+                  period.minimumPaymentsOnOtherDebts.length > 0 &&
                   period.minimumPaymentsOnOtherDebts.map((minPayment) => (
-                    <Table.Tr key={`${period.fortnight}-${minPayment.debtId}`} style={{ opacity: 0.7 }}>
+                    <Table.Tr
+                      key={`${period.fortnight}-${minPayment.debtId}`}
+                      style={{ opacity: 0.7 }}
+                    >
                       <Table.Td />
                       <Table.Td>
                         <Group gap={4}>
@@ -829,8 +1027,7 @@ function PayoffPlanContent({ plan, currentFortnightId }: { plan: DebtPayoffPlanD
                       <Table.Td />
                       <Table.Td />
                     </Table.Tr>
-                  ))
-                )}
+                  ))}
               </>
             ))}
           </Table.Tbody>

@@ -1,7 +1,11 @@
 import { Router } from 'express';
-import { createDebtSchema, updateDebtBodySchema } from '../../../application/dtos/schemas/debt.schema.js';
+import {
+  createDebtSchema,
+  updateDebtBodySchema,
+} from '../../../application/dtos/schemas/debt.schema.js';
 import { upsertMortgageSchema } from '../../../application/dtos/schemas/mortgage.schema.js';
 import { skipDebtPaymentBodySchema } from '../../../application/dtos/schemas/skip-debt-payment.schema.js';
+import { recordDebtBalanceAdjustmentSchema } from '../../../application/dtos/schemas/debt-balance-adjustment.schema.js';
 import { DebtController } from '../controllers/debt.controller.js';
 import { validationMiddleware } from '../middlewares/validation.middleware.js';
 
@@ -18,47 +22,58 @@ export function buildDebtRouter(controller: DebtController): Router {
 
   router.get(
     '/',
-    controller.asyncHandler((req, res) => controller.listDebts(req, res))
+    controller.asyncHandler((req, res) => controller.listDebts(req, res)),
   );
 
   router.get(
     '/payoff-plan',
-    controller.asyncHandler((req, res) => controller.getPayoffPlan(req, res))
+    controller.asyncHandler((req, res) => controller.getPayoffPlan(req, res)),
   );
 
   router.post(
     '/',
     validationMiddleware(createDebtSchema),
-    controller.asyncHandler((req, res) => controller.createDebt(req, res))
+    controller.asyncHandler((req, res) => controller.createDebt(req, res)),
   );
 
   // Mortgage endpoints (must come before /:id routes)
   router.get(
     '/mortgage/overpayment-plan',
-    controller.asyncHandler((req, res) => controller.getMortgageOverpaymentPlan(req, res))
+    controller.asyncHandler((req, res) => controller.getMortgageOverpaymentPlan(req, res)),
   );
 
   router.get(
     '/mortgage',
-    controller.asyncHandler((req, res) => controller.getMortgage(req, res))
+    controller.asyncHandler((req, res) => controller.getMortgage(req, res)),
   );
 
   router.put(
     '/mortgage',
     validationMiddleware(upsertMortgageSchema),
-    controller.asyncHandler((req, res) => controller.upsertMortgage(req, res))
+    controller.asyncHandler((req, res) => controller.upsertMortgage(req, res)),
   );
 
   router.post(
     '/:id/skip-payment',
     validationMiddleware(skipDebtPaymentBodySchema),
-    controller.asyncHandler((req, res) => controller.skipPayment(req, res))
+    controller.asyncHandler((req, res) => controller.skipPayment(req, res)),
+  );
+
+  router.get(
+    '/:id/balance-adjustments',
+    controller.asyncHandler((req, res) => controller.listBalanceAdjustments(req, res)),
+  );
+
+  router.post(
+    '/:id/balance-adjustments',
+    validationMiddleware(recordDebtBalanceAdjustmentSchema),
+    controller.asyncHandler((req, res) => controller.recordBalanceAdjustment(req, res)),
   );
 
   router.put(
     '/:id',
     validationMiddleware(updateDebtBodySchema),
-    controller.asyncHandler((req, res) => controller.updateDebt(req, res))
+    controller.asyncHandler((req, res) => controller.updateDebt(req, res)),
   );
 
   return router;
