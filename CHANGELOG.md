@@ -5,6 +5,12 @@ All notable changes to Bucketwise Planner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-04-08
+
+### Fixed
+
+- Profile page: adding a fixed expense no longer throws `TypeError: crypto.randomUUID is not a function` when accessed over plain HTTP (common in self-hosted LAN setups) — replaced direct `crypto.randomUUID()` call with the existing `generateUUID()` utility which falls back to a `Math.random`-based implementation in non-secure contexts
+
 ## [0.4.4] - 2026-04-08
 
 ### Fixed
@@ -231,6 +237,7 @@ Learn more: https://www.barefootinvestor.com/
 
 ---
 
+[0.4.5]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.5
 [0.4.4]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.4
 [0.4.3]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.3
 [0.4.2]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.2
