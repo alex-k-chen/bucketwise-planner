@@ -5,6 +5,12 @@ All notable changes to Bucketwise Planner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-04-08
+
+### Security
+
+- Bumped `vite` from 7.3.0 to 7.3.2 (dev dependency) — patches three `server.fs` path traversal vulnerabilities in the dev server ([vitejs/vite#22159](https://github.com/vitejs/vite/issues/22159), [#22160](https://github.com/vitejs/vite/issues/22160), [#22161](https://github.com/vitejs/vite/issues/22161)); does not affect production builds
+
 ## [0.4.5] - 2026-04-08
 
 ### Fixed
@@ -237,6 +243,7 @@ Learn more: https://www.barefootinvestor.com/
 
 ---
 
+[0.4.6]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.6
 [0.4.5]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.5
 [0.4.4]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.4
 [0.4.3]: https://github.com/solid-logic-studios/bucketwise-planner/releases/tag/v0.4.3
