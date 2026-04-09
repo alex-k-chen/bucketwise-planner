@@ -8,7 +8,7 @@ Welcome! Bucketwise Planner is a community-driven open-source project implementi
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/PaulAtkins88/bucketwise-planner.git
+   git clone https://github.com/solid-logic-studios/bucketwise-planner.git
    cd bucketwise-planner
    ```
 
@@ -53,13 +53,13 @@ Welcome! Bucketwise Planner is a community-driven open-source project implementi
 
 ### Reporting Bugs
 
-1. Check [GitHub Issues](https://github.com/PaulAtkins88/bucketwise-planner/issues) to avoid duplicates
-2. Use the [Bug Report](https://github.com/PaulAtkins88/bucketwise-planner/issues/new?template=bug_report.md) template
+1. Check [GitHub Issues](https://github.com/solid-logic-studios/bucketwise-planner/issues) to avoid duplicates
+2. Use the [Bug Report](https://github.com/solid-logic-studios/bucketwise-planner/issues/new?template=bug_report.md) template
 3. Include steps to reproduce, expected vs actual behavior, and environment details
 
 ### Requesting Features
 
-1. Use the [Feature Request](https://github.com/PaulAtkins88/bucketwise-planner/issues/new?template=feature_request.md) template
+1. Use the [Feature Request](https://github.com/solid-logic-studios/bucketwise-planner/issues/new?template=feature_request.md) template
 2. Describe the use case and benefits
 3. Suggest acceptance criteria
 
@@ -133,8 +133,9 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md). We are committed to provi
 
 - 📖 Check [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design
 - 🚀 See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for deployment
+- 🚢 See [docs/RELEASING.md](docs/RELEASING.md) for the maintainer release checklist
 - 💡 Browse [docs/FEATURE_WISHLIST.md](docs/FEATURE_WISHLIST.md) for ideas
-- 💬 Ask in [GitHub Discussions](https://github.com/PaulAtkins88/bucketwise-planner/discussions)
+- 💬 Ask in [GitHub Discussions](https://github.com/solid-logic-studios/bucketwise-planner/discussions)
 
 ## Attribution
 

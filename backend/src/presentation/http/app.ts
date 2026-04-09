@@ -2,6 +2,7 @@ import type { Application } from 'express';
 import express, { json, urlencoded } from 'express';
 import * as path from 'node:path';
 import { CalculateMortgageOverpaymentPlanUseCase } from '../../application/use-cases/calculate-mortgage-overpayment-plan.use-case.js';
+import { CommitTransactionCsvImportUseCase } from '../../application/use-cases/commit-transaction-csv-import.use-case.js';
 import { CreateDebtUseCase } from '../../application/use-cases/create-debt.use-case.js';
 import { CreateFortnightUseCase } from '../../application/use-cases/create-fortnight.use-case.js';
 import { DeleteTransactionUseCase } from '../../application/use-cases/delete-transaction.use-case.js';
@@ -11,22 +12,21 @@ import { GetDebtPayoffPlanUseCase } from '../../application/use-cases/get-debt-p
 import { GetFortnightUseCase } from '../../application/use-cases/get-fortnight.use-case.js';
 import { GetMortgageUseCase } from '../../application/use-cases/get-mortgage.use-case.js';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case.js';
-import { ListDebtsUseCase } from '../../application/use-cases/list-debts.use-case.js';
 import { ListDebtBalanceAdjustmentsUseCase } from '../../application/use-cases/list-debt-balance-adjustments.use-case.js';
+import { ListDebtsUseCase } from '../../application/use-cases/list-debts.use-case.js';
 import { ListForthnightsUseCase } from '../../application/use-cases/list-fortnights.use-case.js';
 import { ListSkippedDebtPaymentsUseCase } from '../../application/use-cases/list-skipped-debt-payments.use-case.js';
 import { ListTransactionsUseCase } from '../../application/use-cases/list-transactions.use-case.js';
 import { LoginUseCase } from '../../application/use-cases/login.use-case.js';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case.js';
 import { PreviewTransactionCsvImportUseCase } from '../../application/use-cases/preview-transaction-csv-import.use-case.js';
-import { RecordTransactionUseCase } from '../../application/use-cases/record-transaction.use-case.js';
 import { RecordDebtBalanceAdjustmentUseCase } from '../../application/use-cases/record-debt-balance-adjustment.use-case.js';
+import { RecordTransactionUseCase } from '../../application/use-cases/record-transaction.use-case.js';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case.js';
 import { SendChatMessageUseCase } from '../../application/use-cases/send-chat-message.use-case.js';
 import { SignupUseCase } from '../../application/use-cases/signup.use-case.js';
 import { SkipDebtPaymentUseCase } from '../../application/use-cases/skip-debt-payment.use-case.js';
 import { UpdateDebtUseCase } from '../../application/use-cases/update-debt.use-case.js';
-import { CommitTransactionCsvImportUseCase } from '../../application/use-cases/commit-transaction-csv-import.use-case.js';
 import { UpdateTransactionUseCase } from '../../application/use-cases/update-transaction.use-case.js';
 import { UpsertMortgageUseCase } from '../../application/use-cases/upsert-mortgage.use-case.js';
 import { UpsertProfileUseCase } from '../../application/use-cases/upsert-profile.use-case.js';
@@ -38,8 +38,8 @@ import { TokenBlacklist } from '../../infrastructure/auth/TokenBlacklist.js';
 import { runMigrations } from '../../infrastructure/database/migrations.js';
 import { createPgPool, ensureSchema } from '../../infrastructure/database/pg.js';
 import { MemoryBudgetProfileRepository } from '../../infrastructure/persistence/memory/memory-budget-profile.repository.js';
-import { MemoryDebtRepository } from '../../infrastructure/persistence/memory/memory-debt.repository.js';
 import { MemoryDebtBalanceAdjustmentRepository } from '../../infrastructure/persistence/memory/memory-debt-balance-adjustment.repository.js';
+import { MemoryDebtRepository } from '../../infrastructure/persistence/memory/memory-debt.repository.js';
 import { MemoryFortnightSnapshotRepository } from '../../infrastructure/persistence/memory/memory-fortnight-snapshot.repository.js';
 import { MemorySkippedDebtPaymentRepository } from '../../infrastructure/persistence/memory/memory-skipped-debt-payment.repository.js';
 import { MemoryTransactionRepository } from '../../infrastructure/persistence/memory/memory-transaction.repository.js';
@@ -59,13 +59,13 @@ import { DashboardController } from './controllers/dashboard.controller.js';
 import { DebtController } from './controllers/debt.controller.js';
 import { FortnightController } from './controllers/fortnight.controller.js';
 import { ProfileController } from './controllers/profile.controller.js';
-import { TransactionController } from './controllers/transaction.controller.js';
 import { TransactionImportController } from './controllers/transaction-import.controller.js';
+import { TransactionController } from './controllers/transaction.controller.js';
 import { createAuthMiddleware } from './middleware/auth.middleware.js';
 import {
-  contentTypeMiddleware,
-  corsPrefixMiddleware,
-  requestLoggingMiddleware,
+    contentTypeMiddleware,
+    corsPrefixMiddleware,
+    requestLoggingMiddleware,
 } from './middlewares/common.middleware.js';
 import { globalErrorMiddleware, notFoundMiddleware } from './middlewares/error.middleware.js';
 import { buildAdminRouter } from './routes/admin.routes.js';
@@ -84,14 +84,23 @@ import { buildTransactionRouter as buildRecordTransactionRouter } from './routes
  */
 export async function createApp(): Promise<Application> {
   const storageMethod = (process.env.STORAGE_METHOD || 'memory').toLowerCase();
+  const schemaMode = (process.env.DB_SCHEMA_MODE || 'auto').toLowerCase();
 
   const isPostgres = storageMethod === 'postgres';
+  const shouldManageSchema = schemaMode !== 'manual';
 
   const pool = isPostgres ? createPgPool() : null;
 
   if (pool) {
-    await ensureSchema(pool);
-    await runMigrations(pool);
+    if (shouldManageSchema) {
+      if (schemaMode !== 'auto') {
+        console.warn(`Unknown DB_SCHEMA_MODE \"${schemaMode}\", defaulting to auto`);
+      }
+      await ensureSchema(pool);
+      await runMigrations(pool);
+    } else {
+      console.log(`DB schema mode: ${schemaMode} (startup schema changes disabled)`);
+    }
   }
 
   // Log storage strategy for visibility

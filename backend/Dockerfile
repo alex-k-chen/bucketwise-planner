@@ -32,6 +32,9 @@ RUN pnpm run --filter backend build
 # Remove source code but keep dist, node_modules, and .pnpm
 RUN rm -rf /app/backend/src /app/backend/tests /app/frontend /app/.git /app/.github /app/docs
 
+# Ensure runtime directories exist for persisted uploads.
+RUN mkdir -p /app/uploads/avatars
+
 # Manually remove devDependencies from node_modules (TypeScript, @types/*, tsx, vitest, etc.)
 # Keep only runtime dependencies
 RUN rm -rf /app/node_modules/typescript /app/node_modules/@types /app/node_modules/tsx /app/node_modules/vitest /app/node_modules/esbuild

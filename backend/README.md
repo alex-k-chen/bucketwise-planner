@@ -76,6 +76,7 @@ cp .env.example .env
 # - ADMIN_SECRET (generate with: openssl rand -base64 32)
 # - GEMINI_API_KEY (optional, for AI chat)
 # - AI_ENABLED (optional, default false)
+# - DB_SCHEMA_MODE (optional, default auto)
 ```
 
 ### Database Setup
@@ -92,6 +93,7 @@ Then update `.env` with connection string:
 
 ```
 PG_CONNECTION_STRING=postgresql://budgetwise:your-password@localhost:5432/budgetwise
+DB_SCHEMA_MODE=auto
 ```
 
 ### Run Schema Initialization
@@ -101,6 +103,10 @@ cd backend && pnpm run db:ensure-schema
 ```
 
 This creates all tables and applies any outstanding migrations automatically on startup.
+
+`DB_SCHEMA_MODE=auto` is the default and preserves the existing behavior of applying schema setup and migrations at startup. For managed environments where routine restarts should not change the database schema, set `DB_SCHEMA_MODE=manual`.
+
+When running with `DB_SCHEMA_MODE=manual`, schema changes are skipped during startup. If a release requires a migration, back up the database first, temporarily switch `DB_SCHEMA_MODE=auto` for one controlled restart, then switch it back to `manual` afterward.
 
 #### Upgrading from <= 0.4.0 (timezone fortnight backfill)
 
@@ -193,6 +199,11 @@ All repository implementations conform to the same domain interfaces. The applic
 ## Migrations
 
 Migrations are plain SQL files in `backend/migrations/`, applied alphabetically at startup via the migration runner. Applied migrations are tracked in the `schema_migrations` table.
+
+Startup migration behavior is controlled by `DB_SCHEMA_MODE`:
+
+- `auto` (default): run schema initialization and pending migrations on backend startup
+- `manual`: skip schema initialization and migrations on startup
 
 | File                                          | Description                                                                             |
 | --------------------------------------------- | --------------------------------------------------------------------------------------- |

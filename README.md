@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen)](https://github.com/solid-logic-studios/bucketwise-planner)
 [![Security](https://img.shields.io/badge/security-SECURITY.md-blue)](SECURITY.md)
-[![Release](https://img.shields.io/badge/release-v0.4.6-blue)](https://github.com/solid-logic-studios/bucketwise-planner/releases)
+[![Release](https://img.shields.io/badge/release-v0.4.7-blue)](https://github.com/solid-logic-studios/bucketwise-planner/releases)
 
 Multi-user budgeting app implementing Scott Pape's Barefoot Investor methodology. Fortnightly budgeting with bucket allocations (60/10/10/20), automated debt snowball payoff, transaction tracking, and optional AI financial advisor.
 
@@ -85,7 +85,12 @@ _This is a community-driven open-source implementation, not affiliated with or e
 
 ### Docker Compose (Recommended)
 
-**Docker Hub:** [Coming soon]
+**Docker Hub releases:**
+
+- `slsadmin/bucketwise-planner-backend`
+- `slsadmin/bucketwise-planner-frontend`
+
+Release images are published from semver tags such as `v0.4.7`, producing matching Docker tags such as `0.4.7`.
 
 Example `docker-compose.yml` (Postgres + backend + frontend):
 
@@ -167,7 +172,20 @@ docker compose up -d
 > [!TIP]
 > Generate secure secrets with: `openssl rand -base64 32`
 
+> [!NOTE]
+> `DB_SCHEMA_MODE` defaults to `auto`, which keeps the current self-hosted behavior of applying schema setup and pending SQL migrations on backend startup. Managed environments such as CasaOS can set `DB_SCHEMA_MODE=manual` to prevent routine restarts from making schema changes.
+
 **Full deployment guide:** [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md)
+
+## Support And Guides
+
+- Installation and self-hosting: [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md)
+- Upgrade notes: [docs/UPGRADING.md](docs/UPGRADING.md)
+- Architecture overview: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- FAQ: [docs/FAQ.md](docs/FAQ.md)
+- Optional AI setup: [docs/AI_ADVISOR.md](docs/AI_ADVISOR.md)
+- Releases: [Releases](https://github.com/solid-logic-studios/bucketwise-planner/releases)
+- Community questions and ideas: [Discussions](https://github.com/solid-logic-studios/bucketwise-planner/discussions)
 
 ### Local Development
 

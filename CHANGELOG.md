@@ -5,6 +5,17 @@ All notable changes to Bucketwise Planner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Docker release workflow that publishes multi-arch backend and frontend images to Docker Hub on semver tags
+
+### Changed
+
+- Backend startup now supports `DB_SCHEMA_MODE=manual` to skip automatic schema setup and migrations in managed deployments such as CasaOS
+- Backend runtime image now pre-creates the uploads directory used for persisted avatars
+
 ## [0.4.6] - 2026-04-08
 
 ### Security

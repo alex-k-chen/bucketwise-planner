@@ -22,7 +22,7 @@ The fastest way to get Bucketwise Planner running.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/PaulAtkins88/bucketwise-planner.git
+git clone https://github.com/solid-logic-studios/bucketwise-planner.git
 cd bucketwise-planner
 ```
 
@@ -47,6 +47,11 @@ ADMIN_SECRET=generate-another-strong-secret-here
 # OPTIONAL: AI Advisor (requires Google API key)
 GEMINI_API_KEY=
 AI_ENABLED=false
+
+# OPTIONAL: schema behavior
+# auto = apply schema setup/migrations on backend startup
+# manual = never apply schema changes on startup
+DB_SCHEMA_MODE=auto
 ```
 
 **Important:** Generate strong secrets! Example:
@@ -71,6 +76,17 @@ docker compose ps
 ```
 
 All services should show `running` status.
+
+### Release Images
+
+If you prefer pinned release images instead of building locally, Bucketwise publishes Docker Hub images from semver Git tags:
+
+- `slsadmin/bucketwise-planner-backend:<version>`
+- `slsadmin/bucketwise-planner-frontend:<version>`
+
+Example tags follow the Git release version without the leading `v`, for example `0.4.7`.
+
+These release images are intended for managed deployments such as CasaOS or any environment where you want repeatable pulls instead of building on the target host.
 
 ### 4. Access the Application
 
@@ -159,9 +175,17 @@ Frontend runs on http://localhost:5173
 |----------|-------------|---------|
 | `GEMINI_API_KEY` | Google AI API key (for chat feature) | (empty = disabled) |
 | `AI_ENABLED` | Enable AI advisor | `false` |
+| `DB_SCHEMA_MODE` | Startup schema behavior (`auto` or `manual`) | `auto` |
 | `NODE_ENV` | Environment mode | `production` |
 | `PORT` | Backend port | `3000` |
 | `VITE_API_BASE` | Frontend API endpoint | `http://localhost:3000` |
+
+### Schema Mode
+
+- `DB_SCHEMA_MODE=auto`: backend startup runs schema initialization and pending SQL migrations. This is the default and matches the existing public Docker Compose behavior.
+- `DB_SCHEMA_MODE=manual`: backend startup skips schema setup and migrations. Use this in managed environments where container restarts should not mutate the database automatically.
+
+If you run with `DB_SCHEMA_MODE=manual` and a future release requires schema changes, back up the database first, then temporarily set `DB_SCHEMA_MODE=auto` for one controlled backend restart to apply the migration, and switch it back to `manual` afterward.
 
 ## Reverse Proxy Setup
 
