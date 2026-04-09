@@ -71,3 +71,4 @@ For the initial CasaOS-backed release, use this order:
 5. Commit and push the `casaos-appstore` branch.
 6. Add the CasaOS App Store source ZIP URL in CasaOS.
 7. Install the app in CasaOS with your external `PG_CONNECTION_STRING`, secrets, and `DB_SCHEMA_MODE=manual`.
+8. Leave the CasaOS `Network` field blank, leave explicit container names blank, and use `5555` for the Web UI port.

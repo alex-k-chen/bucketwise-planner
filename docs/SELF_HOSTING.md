@@ -88,6 +88,13 @@ Example tags follow the Git release version without the leading `v`, for example
 
 These release images are intended for managed deployments such as CasaOS or any environment where you want repeatable pulls instead of building on the target host.
 
+For CasaOS installs using the dedicated `casaos-appstore` branch:
+
+- Leave the `Network` field blank so CasaOS/Docker Compose creates the app network automatically.
+- Leave explicit container names blank.
+- Use port `5555` for the Web UI.
+- Keep `DB_SCHEMA_MODE=manual` for routine operation.
+
 ### 4. Access the Application
 
 - **Web UI:** http://localhost:5555
