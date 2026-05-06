@@ -10,7 +10,7 @@ Multi-user budgeting app implementing Scott Pape's Barefoot Investor methodology
 ## 🙏 Acknowledgments
 
 This project implements the budgeting methodology created by **Scott Pape** in his book _[The Barefoot Investor](https://www.barefootinvestor.com/)_. The bucket-based allocation strategy (60% Daily Expenses, 10% Splurge, 10% Smile, 20% Fire Extinguisher) and debt snowball method are core principles from his work, which has helped millions of people take control of their finances.
-
+ 
 **Learn more**: [www.barefootinvestor.com](https://www.barefootinvestor.com/)
 
 _This is a community-driven open-source implementation, not affiliated with or endorsed by Scott Pape or The Barefoot Investor._
